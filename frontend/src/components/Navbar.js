@@ -6,36 +6,22 @@ import { AuthContext } from "../AuthContext";
 const Navbar = () => {
   const { isLoggedIn, logout } = useContext(AuthContext);
 
-  return (
-    <Menu mode="horizontal" theme="dark">
-      <Menu.Item>
-        <Link to="/">Home</Link>
-      </Menu.Item>
-      {isLoggedIn ? (
-        <>
-          <Menu.Item>
-            <Link to="/chat">Chat</Link>
-          </Menu.Item>
-          <Menu.Item>
-            <Link to="/add-post">Add Post</Link>
-          </Menu.Item>
-          <Menu.Item>
-            <Link to="/profile">Profile</Link>
-          </Menu.Item>
-          <Menu.Item onClick={logout}>Logout</Menu.Item>
-        </>
-      ) : (
-        <>
-          <Menu.Item>
-            <Link to="/login">Login</Link>
-          </Menu.Item>
-          <Menu.Item>
-            <Link to="/signup">Sign Up</Link>
-          </Menu.Item>
-        </>
-      )}
-    </Menu>
-  );
+  const menuItems = [
+    { key: "home", label: <Link to="/">Home</Link> },
+    ...(isLoggedIn
+      ? [
+          { key: "chat", label: <Link to="/chat">Chat</Link> },
+          { key: "add-post", label: <Link to="/add-post">Add Post</Link> },
+          { key: "profile", label: <Link to="/profile">Profile</Link> },
+          { key: "logout", label: <span onClick={logout}>Logout</span> },
+        ]
+      : [
+          { key: "login", label: <Link to="/login">Login</Link> },
+          { key: "signup", label: <Link to="/signup">Sign Up</Link> },
+        ]),
+  ];
+
+  return <Menu mode="horizontal" theme="dark" items={menuItems} />;
 };
 
 export default Navbar;

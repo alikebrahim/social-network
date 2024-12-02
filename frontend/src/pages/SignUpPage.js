@@ -1,9 +1,16 @@
-import React from "react";
+import React, { useContext } from "react";
 import { Form, Input, Button } from "antd";
+import { WebSocketContext } from "../Providers/WebSocketContext";
 
 const SignUpPage = () => {
+  const socket = useContext(WebSocketContext);
+
   const handleFinish = (values) => {
     console.log("User Signed Up:", values);
+    if (socket) {
+      console.log(values);
+      socket.send(JSON.stringify({ type: "register", data: values }));
+    }
   };
 
   return (
