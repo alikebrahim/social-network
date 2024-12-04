@@ -10,10 +10,12 @@ import (
 )
 
 var (
-	clients   = make(map[*websocket.Conn]bool)
-	broadcast = make(chan Message)
-	mutex     sync.Mutex
-	DB        *sql.DB
+	clients      = make(map[*websocket.Conn]bool)
+	logedInUsers = make(map[*websocket.Conn]bool)
+	broadcast    = make(chan Message)
+	mutex        sync.Mutex
+	DB           *sql.DB
+	sender       *websocket.Conn
 )
 
 type Message struct {
@@ -28,10 +30,12 @@ type Message struct {
 }
 
 type User struct {
-	ID       int    `json:"id"`
-	Email    string `json:"email"`
-	Password string `json:"password"`
-	Bio      string `json:"bio"`
+	Email     string `json:"email"`
+	Password  string `json:"password"`
+	FirstName string `json:"first_name"`
+	LastName  string `json:"last_name"`
+	BirthDate string `json:"birth_date"`
+	Bio       string `json:"bio"`
 }
 
 var upgrader = websocket.Upgrader{
@@ -50,54 +54,29 @@ func HandleConnections(w http.ResponseWriter, r *http.Request) {
 
 	mutex.Lock()
 	clients[conn] = true
+	logedInUsers[conn] = false
 	mutex.Unlock()
 
 	for {
 		var msg Message
 		err := conn.ReadJSON(&msg)
-		println(msg.Type)
 		if err != nil {
-			if websocket.IsCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
-				log.Printf("WebSocket closed: %v", err)
-			} else {
-				log.Printf("WebSocket read error: %v", err)
-			}
-			mutex.Lock()
-			delete(clients, conn)
-			mutex.Unlock()
+			handleWebSocketError(conn, err)
 			break
 		}
 		broadcast <- msg
+		sender = conn
 	}
 	log.Println("WebSocket connection closed")
 }
 
-func HandleMessages() {
-	for {
-		msg := <-broadcast
-		switch msg.Type {
-		case "register":
-			handleSignup(msg)
-		default:
-			mutex.Lock()
-			for client := range clients {
-				err := client.WriteJSON(msg)
-				if err != nil {
-					log.Printf("WebSocket write error: %v", err)
-					client.Close()
-					delete(clients, client)
-				}
-			}
-			mutex.Unlock()
-		}
+func handleWebSocketError(conn *websocket.Conn, err error) {
+	if websocket.IsCloseError(err, websocket.CloseGoingAway, websocket.CloseNormalClosure) {
+		log.Printf("WebSocket closed: %v", err)
+	} else {
+		log.Printf("WebSocket read error: %v", err)
 	}
-}
-
-func handleSignup(msg Message) {
-	_, err := DB.Exec("INSERT INTO users (username, password) VALUES (?, ?)", msg.Data.Email, msg.Data.Password)
-	if err != nil {
-		log.Printf("Failed to sign up user: %v", err)
-		return
-	}
-	log.Printf("User signed up: %s", msg.Username)
+	mutex.Lock()
+	delete(clients, conn)
+	mutex.Unlock()
 }
