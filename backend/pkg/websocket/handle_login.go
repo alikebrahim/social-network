@@ -31,10 +31,6 @@ func login(msg Message) error {
 	err := DB.QueryRow("SELECT id FROM users WHERE email = ? AND password = ?",
 		msg.Data.Email, msg.Data.Password).Scan(&userID)
 	if err != nil {
-		// if err == sql.ErrNoRows {
-		// 	fmt.Println("User does not exist")
-		// 	return nil
-		// }
 		return err
 	}
 	fmt.Println("User exists with ID:", userID)
