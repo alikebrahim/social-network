@@ -1,8 +1,8 @@
-import React, { useContext, useState } from "react";
+import React, { useContext, useState, useEffect } from "react";
 import { Button, Input, Layout, Typography } from "antd";
 import { AuthContext } from "../AuthContext";
 import { useParams } from "react-router-dom";
-
+import { users } from "../components/UsersList";
 const { Header, Content } = Layout;
 const { Title } = Typography;
 
@@ -23,6 +23,23 @@ const ChatPage = () => {
       setNewMessage("");
     }
   };
+
+  useEffect(() => {
+    const fetchInfo = () => {
+      console.log(type, id);
+      const user = users.find(
+        (user) => user.id === parseInt(id) && user.type === type
+      );
+      setSelectedUser(user);
+      setMessages([
+        { sender: user.name, text: "newMessage" },
+        { sender: user.name, text: "newMessage" },
+        { sender: "You", text: "newMessage" },
+        { sender: user.name, text: "newMessage" },
+      ]);
+    };
+    fetchInfo();
+  }, [id, type]);
 
   return (
     <Layout style={{ height: "95vh" }}>
