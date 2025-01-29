@@ -9,6 +9,11 @@ import (
 	"backend/pkg/websocket"
 )
 
+var (
+	port = ":8080"
+	
+)
+
 func main() {
 	sqlite.InitDB()
 	sqlite.RunMigrations()
@@ -22,6 +27,6 @@ func main() {
 
 	r.HandleFunc("/ws", websocket.HandleConnections)
 
-	log.Println("Server started on :8080")
-	log.Fatal(http.ListenAndServe(":8080", r))
+	log.Println("Server started on port", port)
+	log.Fatal(http.ListenAndServe(port, r))
 }
