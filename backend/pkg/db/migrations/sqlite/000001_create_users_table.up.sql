@@ -9,6 +9,7 @@ CREATE TABLE users (
     nickname TEXT,
     about_me TEXT,
     profile_type TEXT DEFAULT 'public',
+    bio TEXT,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
 );

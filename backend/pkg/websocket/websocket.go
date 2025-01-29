@@ -36,6 +36,8 @@ type User struct {
 	LastName  string `json:"last_name"`
 	BirthDate string `json:"birth_date"`
 	Bio       string `json:"bio"`
+	Avatar    string `json:"avatar"`
+	Nickname  string `json:"nickname"`
 }
 
 var upgrader = websocket.Upgrader{
