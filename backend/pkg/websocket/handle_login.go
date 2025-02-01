@@ -1,39 +1,79 @@
 package websocket
 
 import (
+	"crypto/rand"
+	"database/sql"
+	"encoding/hex"
 	"fmt"
 	"log"
-	"strings"
+
+	"golang.org/x/crypto/bcrypt"
 )
 
+var loggedInUsers = make(map[string]bool)
+
 func handleLogin(msg Message) {
-	response := Message{Type: "register_response"}
-	fmt.Println(msg)
-	login(msg)
-	err := login(msg)
+	response := Message{Type: "login_response"}
+
+	sessionToken,err := login(msg)
 	if err != nil {
-		log.Printf("Failed to sign up user: %v", err)
-		if strings.Contains(err.Error(), "no rows in result set") {
+		log.Printf("Login failed for user %s: %v", msg.Data.Email, err)
+		if err == sql.ErrNoRows {
 			response.Content = "Email or password is incorrect"
 		} else {
-			response.Content = "Signup failed"
+			response.Content = "Login failed"
 		}
 	} else {
 		log.Printf("User logged in: %s", msg.Data.Email)
 		response.Content = "Login successful"
+		response.SessionToken = sessionToken // ✅ Send the token
+		log.Print("Session token sent to client: ", response.SessionToken)
 	}
 
 	sendResponseToClients(response)
 }
 
-func login(msg Message) error {
+func login(msg Message) (string, error) {
 	var userID int
-	err := DB.QueryRow("SELECT id FROM users WHERE email = ? AND password = ?",
-		msg.Data.Email, msg.Data.Password).Scan(&userID)
+	var hashedPassword string
+	
+	err := DB.QueryRow("SELECT id, password FROM users WHERE email = ?", msg.Data.Email).Scan(&userID, &hashedPassword)
 	if err != nil {
-		return err
+		return "", err
 	}
-	fmt.Println("User exists with ID:", userID)
-	logedInUsers[sender] = true
-	return nil
+
+	// Verify password with bcrypt
+	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(msg.Data.Password)); err != nil {
+		return "", err
+	}
+
+	// Generate session token
+	sessionToken, err := generateSessionToken()
+	if err != nil {
+		log.Println("Error generating session token:", err)
+		return "", err
+	}
+
+	// Store session in DB
+	_, err = DB.Exec("INSERT INTO sessions (user_id, session_token) VALUES (?, ?)", userID, sessionToken)
+	if err != nil {
+		log.Println("Error saving session:", err)
+		return "", err
+	}
+
+	// Store user login state
+	loggedInUsers[msg.Data.Email] = true
+	fmt.Println("User logged in:", msg.Data.Email)
+
+	// ✅ Return session token
+	return sessionToken, nil
+}
+
+func generateSessionToken() (string, error) {
+	bytes := make([]byte, 32)
+	_, err := rand.Read(bytes)
+	if err != nil {
+		return "", err
+	}
+	return hex.EncodeToString(bytes), nil
 }

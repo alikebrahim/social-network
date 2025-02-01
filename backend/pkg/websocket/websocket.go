@@ -19,14 +19,17 @@ var (
 )
 
 type Message struct {
-	Type     string `json:"type"`
-	Sender   string `json:"sender"`
-	Receiver string `json:"receiver"`
-	Content  string `json:"content"`
-	Username string `json:"username"`
-	Password string `json:"password"`
-	Bio      string `json:"bio"`
-	Data     User   `json:"data"`
+	Type         string `json:"type"`
+	Sender       string `json:"sender"`
+	Receiver     string `json:"receiver"`
+	Content      string `json:"content"`
+	Username     string `json:"username"`
+	Password     string `json:"password"`
+	Avatar       string `json:"avatar"`
+	Nickname     string `json:"nickname"`
+	Bio          string `json:"bio"`
+	SessionToken string `json:"session_token,omitempty"` 
+	Data         User   `json:"data"`
 }
 
 type User struct {
@@ -35,9 +38,10 @@ type User struct {
 	FirstName string `json:"first_name"`
 	LastName  string `json:"last_name"`
 	BirthDate string `json:"birth_date"`
-	Bio       string `json:"bio"`
 	Avatar    string `json:"avatar"`
 	Nickname  string `json:"nickname"`
+	SessionToken string `json:"session_token,omitempty"` 
+	Bio       string `json:"bio"`
 }
 
 var upgrader = websocket.Upgrader{

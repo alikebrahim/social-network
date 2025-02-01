@@ -12,6 +12,9 @@ func HandleMessages() {
 			handleSignup(msg)
 		case "login":
 			handleLogin(msg)
+			log.Printf("Login message received: %v", msg)
+		case "logout":
+			handleLogout(msg)
 		default:
 			broadcastMessageToClients(msg)
 		}
