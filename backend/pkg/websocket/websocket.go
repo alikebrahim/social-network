@@ -30,6 +30,16 @@ type Message struct {
 	Bio          string `json:"bio"`
 	SessionToken string `json:"session_token,omitempty"` 
 	Data         User   `json:"data"`
+	Post         Post   `json:"post"`
+}
+
+type Post struct {
+	ID        int    `json:"id"`
+	UserID    int    `json:"user_id"`
+	Content   string `json:"content"`
+	Image     string `json:"image"`
+	Privacy  string `json:"privacy"`
+	CreatedAt string `json:"created_at"`
 }
 
 type User struct {

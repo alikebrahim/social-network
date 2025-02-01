@@ -4,7 +4,6 @@ import (
 	"log"
 	"strings"
 
-	"golang.org/x/crypto/bcrypt"
 )
 
 func handleSignup(msg Message) {
@@ -42,10 +41,4 @@ func registerUser(msg Message, hashedPassword string) error {
 	return err
 }
 
-func hashPassword(password string) (string, error) {
-	hashedpassword, err := bcrypt.GenerateFromPassword([]byte(password), bcrypt.DefaultCost)
-	if err != nil {
-		return "", err
-	}
-	return string(hashedpassword), nil
-}
+

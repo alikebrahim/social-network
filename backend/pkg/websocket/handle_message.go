@@ -10,11 +10,16 @@ func HandleMessages() {
 		switch msg.Type {
 		case "register":
 			handleSignup(msg)
+			log.Printf("Signup message received: %v", msg)
 		case "login":
 			handleLogin(msg)
 			log.Printf("Login message received: %v", msg)
 		case "logout":
 			handleLogout(msg)
+			log.Printf("Logout message received: %v", msg)
+		case "create_post":
+			handlePostCreation(msg)
+			log.Printf("Post message received: %v", msg)
 		default:
 			broadcastMessageToClients(msg)
 		}

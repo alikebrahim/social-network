@@ -1,9 +1,7 @@
 package websocket
 
 import (
-	"crypto/rand"
 	"database/sql"
-	"encoding/hex"
 	"fmt"
 	"log"
 
@@ -42,38 +40,25 @@ func login(msg Message) (string, error) {
 		return "", err
 	}
 
-	// Verify password with bcrypt
 	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(msg.Data.Password)); err != nil {
 		return "", err
 	}
 
-	// Generate session token
 	sessionToken, err := generateSessionToken()
 	if err != nil {
 		log.Println("Error generating session token:", err)
 		return "", err
 	}
 
-	// Store session in DB
 	_, err = DB.Exec("INSERT INTO sessions (user_id, session_token) VALUES (?, ?)", userID, sessionToken)
 	if err != nil {
 		log.Println("Error saving session:", err)
 		return "", err
 	}
 
-	// Store user login state
 	loggedInUsers[msg.Data.Email] = true
 	fmt.Println("User logged in:", msg.Data.Email)
 
-	// ✅ Return session token
 	return sessionToken, nil
 }
 
-func generateSessionToken() (string, error) {
-	bytes := make([]byte, 32)
-	_, err := rand.Read(bytes)
-	if err != nil {
-		return "", err
-	}
-	return hex.EncodeToString(bytes), nil
-}
