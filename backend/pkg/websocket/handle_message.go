@@ -20,6 +20,19 @@ func HandleMessages() {
 		case "create_post":
 			handlePostCreation(msg)
 			log.Printf("Post message received: %v", msg)
+		case "follow_request":
+			handleFollowRequest(msg)
+			log.Printf("Follow request message received: %v", msg)
+		case "follow_response":
+			handleFollowResponse(msg)
+			log.Printf("Follow response message received: %v", msg)
+		case "unfollow":
+			handleUnfollow(msg)
+			log.Printf("Unfollow message received: %v", msg)
+		case "get_followers":
+			handleGetFollowers(msg)
+			log.Printf("Get followers message received: %v", msg)
+			
 		default:
 			broadcastMessageToClients(msg)
 		}
@@ -49,9 +62,8 @@ func sendResponseToClients(response Message) {
 			log.Printf("WebSocket write error: %v", err)
 			client.Close()
 			delete(clients, client)
-		} else {
-			sender.WriteJSON(response)
-			log.Printf("Response sent to client: %v", response.Content)
 		}
 	}
+	log.Printf("Response sent to clients: %v", response.Content)
 }
+

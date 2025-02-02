@@ -9,6 +9,7 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+
 var (
 	clients      = make(map[*websocket.Conn]bool)
 	logedInUsers = make(map[*websocket.Conn]bool)
@@ -31,7 +32,17 @@ type Message struct {
 	SessionToken string `json:"session_token,omitempty"` 
 	Data         User   `json:"data"`
 	Post         Post   `json:"post"`
+	Follow follow `json:"follow"`
 }
+
+type follow struct {
+	FollowerID int `json:"follower_id"`
+	FollowedID int `json:"followed_id"`
+	Status     string `json:"status"`
+	Followers []User `json:"followers"`
+}
+
+
 
 type Post struct {
 	ID        int    `json:"id"`
@@ -43,6 +54,7 @@ type Post struct {
 }
 
 type User struct {
+	ID        int    `json:"id"`
 	Email     string `json:"email"`
 	Password  string `json:"password"`
 	FirstName string `json:"first_name"`
