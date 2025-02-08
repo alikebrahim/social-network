@@ -33,6 +33,7 @@ type Message struct {
 	Data         User   `json:"data"`
 	Post         Post   `json:"post"`
 	Follow follow `json:"follow"`
+	Posts        []Post `json:"posts"`
 }
 
 type follow struct {

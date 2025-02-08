@@ -20,6 +20,9 @@ func HandleMessages() {
 		case "create_post":
 			handlePostCreation(msg)
 			log.Printf("Post message received: %v", msg)
+		case "get_posts":
+			handleGetPosts(msg)
+			log.Printf("Get posts message received: %v", msg)
 		case "follow_request":
 			handleFollowRequest(msg)
 			log.Printf("Follow request message received: %v", msg)

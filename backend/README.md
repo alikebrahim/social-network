@@ -224,8 +224,48 @@ ws://localhost:8080/ws
 }
 ```
 
-## ⚡ **Next Steps**
+### ✅ **8. get post**
 
+**Request:**
+
+```json
+{
+  "type": "get_posts",
+  "session_token": "your_valid_session_token"
+}
+
+```
+
+**Expected Response:**
+
+```json
+{
+  "type": "get_posts_response",
+  "posts": [
+    {
+      "id": 1,
+      "user_id": 2,
+      "content": "This is a public post!",
+      "image": "",
+      "privacy": "public",
+      "created_at": "2024-02-01 12:00:00"
+    },
+    {
+      "id": 2,
+      "user_id": 3,
+      "content": "Private post, visible only to followers",
+      "image": "",
+      "privacy": "private",
+      "created_at": "2024-02-01 12:05:00"
+    }
+  ]
+}
+```
+
+
+## ⚡ **Next Steps**
+ 1. get post data 
+ 2. get user data 
 
 
 
