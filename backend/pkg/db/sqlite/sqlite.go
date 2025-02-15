@@ -1,4 +1,4 @@
-package sqlite
+package db
 
 import (
 	"database/sql"
@@ -27,21 +27,21 @@ func InitDB() {
 }
 
 func RunMigrations() {
-    driver, err := sqlite.WithInstance(DB, &sqlite.Config{})
-    if err != nil {
-        log.Fatalf("Failed to create migrate driver: %v", err)
-    }
+	driver, err := sqlite.WithInstance(DB, &sqlite.Config{})
+	if err != nil {
+		log.Fatalf("Failed to create migrate driver: %v", err)
+	}
 
-    m, err := migrate.NewWithDatabaseInstance(
-        "file://./pkg/db/migrations/sqlite",
-        "sqlite3", driver)
-    if err != nil {
-        log.Fatalf("Failed to create migrate instance: %v", err)
-    }
+	m, err := migrate.NewWithDatabaseInstance(
+		"file://./pkg/db/migrations/sqlite",
+		"sqlite3", driver)
+	if err != nil {
+		log.Fatalf("Failed to create migrate instance: %v", err)
+	}
 
-    if err := m.Up(); err != nil && err != migrate.ErrNoChange {
-        log.Fatalf("Failed to run migrations: %v", err)
-    }
+	if err := m.Up(); err != nil && err != migrate.ErrNoChange {
+		log.Fatalf("Failed to run migrations: %v", err)
+	}
 
-    log.Println("Migrations ran successfully.")
+	log.Println("Migrations ran successfully.")
 }

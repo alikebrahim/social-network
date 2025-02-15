@@ -4,29 +4,31 @@ import (
 	"log"
 	"net/http"
 
-	"backend/pkg/db/sqlite"
-	"backend/pkg/routes"
+	db "backend/pkg/db/sqlite"
+	routes "backend/pkg/routes"
 	"backend/pkg/websocket"
 )
 
 var (
 	port = ":8080"
-	
 )
 
+func init() {
+	db.InitDB()
+	db.RunMigrations()
+}
+
 func main() {
-	sqlite.InitDB()
-	sqlite.RunMigrations()
 
 	// Assign the initialized DB to the websocket package
-	websocket.DB = sqlite.DB
+	websocket.DB = db.DB
 
 	go websocket.HandleMessages()
 
-	r := routes.SetupRoutes(sqlite.DB)
+	mux := routes.SetupRoutes()
 
-	r.HandleFunc("/ws", websocket.HandleConnections)
+	mux.HandleFunc("/ws", websocket.HandleConnections)
 
 	log.Println("Server started on port", port)
-	log.Fatal(http.ListenAndServe(port, r))
+	log.Fatal(http.ListenAndServe(port, mux))
 }
