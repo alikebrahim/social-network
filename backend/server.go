@@ -19,13 +19,12 @@ func init() {
 }
 
 func main() {
-
 	// Assign the initialized DB to the websocket package
 	websocket.DB = db.DB
 
 	go websocket.HandleMessages()
 
-	mux := routes.SetupRoutes()
+	mux := routes.SetupRoutes(db.DB)
 
 	mux.HandleFunc("/ws", websocket.HandleConnections)
 
