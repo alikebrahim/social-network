@@ -3,22 +3,21 @@ package routes
 import (
 	"database/sql"
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
 )
 
 type follow struct {
-	FollowerID string    `json:"follower_id"`
-	FollowedID string    `json:"followed_id"`
+	FollowerID int64    `json:"follower_id"`
+	FollowedID int64    `json:"followed_id"`
 	Status     string `json:"status"`
 	Followers  []User `json:"followers"`
 }
 
 // FOLLOWING HANDLERS
 // POST /follow/{id}
-func FollowingHandler(w http.ResponseWriter, r *http.Request, DB *sql.DB, followedID string) {
+func FollowingHandler(w http.ResponseWriter, r *http.Request, DB *sql.DB, followedID int64) {
 	//var user User
 	var follow follow
 
@@ -98,8 +97,50 @@ func FollowingHandler(w http.ResponseWriter, r *http.Request, DB *sql.DB, follow
 
 // GET /follow/requests
 func FollowingRequestsHandler(w http.ResponseWriter, r *http.Request, DB *sql.DB) {
-	fmt.Fprintln(w, "Hello there")
+	var user User
+	sessiomToken, err := GetSessionToken(r)
+	if err != nil {
+		http.Error(w, "Invalid session token", http.StatusUnauthorized)
+		log.Print(err)
+		return
+	}
+	user.ID, err = getUserIDFromSession(sessiomToken)
+	if err != nil {
+		http.Error(w, "Invalid session token", http.StatusUnauthorized)
+		log.Print(err)
+		return
+	}
+	rows, err := DB.Query(`
+	SELECT f.follower_id, u.first_name, u.last_name, u.nickname, u.avatar
+		FROM followers f
+		JOIN users u ON f.follower_id = u.id  -- Fixed JOIN condition
+		WHERE f.followed_id = ? AND f.status = 'pending'
+`, user.ID)
+if err != nil {
+	http.Error(w, "Error getting follower requests", http.StatusInternalServerError)
+	log.Print(err)
+	return
+}
+var followRequests []User
+for rows.Next() {
+	var follower User
+	err := rows.Scan(&follower.ID, &follower.FirstName, &follower.LastName, &follower.Nickname, &follower.Avatar)
+	if err != nil {
+		log.Println("Error scanning row:", err)
+		continue
+	}
+	followRequests = append(followRequests, follower)
+}
 
+if len(followRequests) == 0 {
+	log.Println("No follow requests found")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode([]User{})
+	return
+}
+log.Println("Pending follow requests retrieved:", followRequests)
+w.WriteHeader(http.StatusOK)
+json.NewEncoder(w).Encode(followRequests)
 }
 
 // POST /follow/{id}/accept

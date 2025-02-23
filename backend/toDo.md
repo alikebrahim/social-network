@@ -36,6 +36,7 @@
 ---
 #### - POST /follow/{id}
     - Process: Request to follow another user. If the profile is public, automatically approve; otherwise, create a pending request.
+    done
 #### - GET /follow/requests
     - Process: List all pending follow requests for the authenticated user.
 #### - POST /follow/{id}/accept
