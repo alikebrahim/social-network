@@ -2,15 +2,15 @@ package routes
 
 import (
 	"database/sql"
+	"log"
 	"net/http"
+	"strings"
 )
 
-
 func SetupRoutes(database *sql.DB) *http.ServeMux {
-	DB = database 
+	DB = database
 
 	mux := http.NewServeMux()
-
 
 	mux.HandleFunc("/auth/register", func(w http.ResponseWriter, r *http.Request) {
 		RegisterHandler(w, r, DB)
@@ -22,9 +22,15 @@ func SetupRoutes(database *sql.DB) *http.ServeMux {
 		LogoutHandler(w, r, DB)
 	})
 
-	
 	mux.HandleFunc("/follow/", func(w http.ResponseWriter, r *http.Request) {
-		FollowingHandler(w, r, DB)
+		pathParts := strings.Split(r.URL.Path, "/")
+		if len(pathParts) < 3 {
+			http.Error(w, "Invalid URL", http.StatusBadRequest)
+			return
+		}
+		id := pathParts[2]
+		log.Println(id)
+		FollowingHandler(w, r, DB, id)
 	})
 	mux.HandleFunc("/follow/requests", func(w http.ResponseWriter, r *http.Request) {
 		FollowingRequestsHandler(w, r, DB)
@@ -36,7 +42,6 @@ func SetupRoutes(database *sql.DB) *http.ServeMux {
 		FollowRejectRequestHandler(w, r, DB)
 	})
 
-	
 	mux.HandleFunc("/groups", func(w http.ResponseWriter, r *http.Request) {
 		GroupCreateHandler(w, r, DB)
 	})
@@ -59,7 +64,6 @@ func SetupRoutes(database *sql.DB) *http.ServeMux {
 		GroupCreateEventHandler(w, r, DB)
 	})
 
-	
 	mux.HandleFunc("/posts", func(w http.ResponseWriter, r *http.Request) {
 		PostCreateHandler(w, r, DB)
 	})
@@ -79,7 +83,6 @@ func SetupRoutes(database *sql.DB) *http.ServeMux {
 		PostLikeHandler(w, r, DB)
 	})
 
-	
 	mux.HandleFunc("/profiles/", func(w http.ResponseWriter, r *http.Request) {
 		ProfileGetHandler(w, r, DB)
 	})
