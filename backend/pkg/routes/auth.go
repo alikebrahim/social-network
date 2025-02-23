@@ -5,14 +5,16 @@ import (
 	"database/sql"
 	"encoding/hex"
 	"encoding/json"
+	"errors"
+	"log"
 	"net/http"
+	"strings"
 
-	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 )
 
 type User struct {
-	ID        string `json:"id"`
+	ID        int64  `json:"id"`
 	Email     string `json:"email"`
 	Password  string `json:"password"`
 	FirstName string `json:"first_name"`
@@ -37,8 +39,6 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request, DB *sql.DB) {
 		return
 	}
 
-	user.ID = uuid.New().String()
-
 	hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
 		http.Error(w, "Failed to hash password", http.StatusInternalServerError)
@@ -47,14 +47,19 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request, DB *sql.DB) {
 
 	user.Password = string(hashedPassword)
 
-
-	_, err = DB.Exec(`
+	result, err := DB.Exec(`
 	INSERT INTO users (email, password, first_name, last_name, date_of_birth, bio, avatar, nickname, profile_type) 
 	VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'public')`,
-	user.Email, user.Password, user.FirstName, user.LastName, 
-	user.DOB, user.Bio, user.Avatar, user.Nickname)
+		user.Email, user.Password, user.FirstName, user.LastName,
+		user.DOB, user.Bio, user.Avatar, user.Nickname)
 	if err != nil {
 		http.Error(w, err.Error(), http.StatusInternalServerError)
+		return
+	}
+
+	user.ID, err = result.LastInsertId()
+	if err != nil {
+		http.Error(w, "Failed to get user ID", http.StatusInternalServerError)
 		return
 	}
 
@@ -63,6 +68,7 @@ func RegisterHandler(w http.ResponseWriter, r *http.Request, DB *sql.DB) {
 		http.Error(w, "Failed to generate session token", http.StatusInternalServerError)
 		return
 	}
+	println(user.ID)
 	_, err = DB.Exec("INSERT INTO sessions (user_id, session_token) VALUES (?, ?)", user.ID, seesionToken)
 	if err != nil {
 		http.Error(w, "Error saving session", http.StatusInternalServerError)
@@ -117,6 +123,7 @@ func LoginHandler(w http.ResponseWriter, r *http.Request, DB *sql.DB) {
 		http.Error(w, "Failed to generate session token", http.StatusInternalServerError)
 		return
 	}
+	println(user.ID)
 	_, err = DB.Exec("INSERT INTO sessions (user_id, session_token) VALUES (?, ?)", user.ID, sessionToken)
 	if err != nil {
 		http.Error(w, "Error saving session", http.StatusInternalServerError)
@@ -168,4 +175,58 @@ func generateSessionToken() (string, error) {
 		return "", err
 	}
 	return hex.EncodeToString(bytes), nil
+}
+
+func getUserIDFromSession(sessionToken string) (string, error) {
+	log.Println("Getting session token")
+
+	// ✅ Remove "session_token=" prefix if present
+	token := strings.TrimPrefix(sessionToken, "session_token=")
+	token = strings.TrimSpace(token)
+
+	log.Println("Clean Session Token:", token) // Debugging log
+
+	var userID string // ✅ Change userID from int to string
+
+	err := DB.QueryRow("SELECT user_id FROM sessions WHERE session_token = ?", token).Scan(&userID)
+	if err != nil {
+		log.Println("Session token not found in database:", err)
+		return "", err
+	}
+
+	log.Println("User ID Retrieved:", userID) // Debugging log
+	return userID, nil
+}
+
+func GetSessionToken(r *http.Request) (string, error) {
+	log.Println("GetSessionToken Called")
+
+	// ✅ Try retrieving the session token from cookies
+	cookies := r.Cookies()
+	for _, cookie := range cookies {
+		if cookie.Name == "session_token" {
+			token := strings.TrimSpace(cookie.Value)
+			log.Println("Session Token Found in Cookies:", token)
+			return token, nil
+		}
+	}
+
+	// ✅ Try retrieving from `Session_token` header
+	authHeader := r.Header.Get("Session_token")
+	if authHeader != "" {
+		token := strings.TrimSpace(strings.Split(authHeader, ";")[0]) // ✅ Remove extra attributes
+		log.Println("Session Token Found in Header:", token)
+		return token, nil
+	}
+
+	// ✅ Try `Authorization: Bearer token`
+	authHeader = r.Header.Get("Authorization")
+	if authHeader != "" {
+		token := strings.TrimPrefix(authHeader, "Bearer ")
+		log.Println("Session Token Found in Authorization Header:", token)
+		return token, nil
+	}
+
+	log.Println("No session token found")
+	return "", errors.New("No session token found")
 }
