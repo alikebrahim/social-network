@@ -4,6 +4,7 @@ import (
 	"database/sql"
 	"log"
 	"net/http"
+	"strconv"
 	"strings"
 )
 
@@ -29,8 +30,13 @@ func SetupRoutes(database *sql.DB) *http.ServeMux {
 			return
 		}
 		id := pathParts[2]
-		log.Println(id)
-		FollowingHandler(w, r, DB, id)
+		followerID, err := strconv.ParseInt(id, 10, 64)
+		if err != nil {
+			http.Error(w, "Invalid URL", http.StatusBadRequest)
+			log.Print(err)
+			return
+		}
+		FollowingHandler(w, r, DB, followerID)
 	})
 	mux.HandleFunc("/follow/requests", func(w http.ResponseWriter, r *http.Request) {
 		FollowingRequestsHandler(w, r, DB)

@@ -177,7 +177,7 @@ func generateSessionToken() (string, error) {
 	return hex.EncodeToString(bytes), nil
 }
 
-func getUserIDFromSession(sessionToken string) (string, error) {
+func getUserIDFromSession(sessionToken string) (int64, error) {
 	log.Println("Getting session token")
 
 	// ✅ Remove "session_token=" prefix if present
@@ -186,12 +186,12 @@ func getUserIDFromSession(sessionToken string) (string, error) {
 
 	log.Println("Clean Session Token:", token) // Debugging log
 
-	var userID string // ✅ Change userID from int to string
+	var userID int64 
 
 	err := DB.QueryRow("SELECT user_id FROM sessions WHERE session_token = ?", token).Scan(&userID)
 	if err != nil {
 		log.Println("Session token not found in database:", err)
-		return "", err
+		return 0, err
 	}
 
 	log.Println("User ID Retrieved:", userID) // Debugging log
