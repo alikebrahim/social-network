@@ -144,11 +144,88 @@ json.NewEncoder(w).Encode(followRequests)
 }
 
 // POST /follow/{id}/accept
-func FollowAcceptRequestHandler(w http.ResponseWriter, r *http.Request, DB *sql.DB) {
+func FollowAcceptRequestHandler(w http.ResponseWriter, r *http.Request, DB *sql.DB, followedId int64) {
+	sessionToken, err := GetSessionToken(r)
+	if err != nil {
+		http.Error(w, "Invalid session token", http.StatusUnauthorized)
+		log.Print(err)
+		return
+	}
 
+	userID, err := getUserIDFromSession(sessionToken)
+	if err != nil {
+		http.Error(w, "Invalid session token", http.StatusUnauthorized)
+		log.Print(err)
+		return
+	}
+
+	var count int
+	err = DB.QueryRow("SELECT COUNT(*) FROM followers WHERE follower_id = ? AND followed_id = ? AND status = 'pending'", followedId, userID).Scan(&count)
+	if err != nil {
+		http.Error(w, "Error checking if follow request exists", http.StatusInternalServerError)
+		log.Print(err)
+		return
+	}
+
+	if count == 0 {
+		http.Error(w, "No follow request found", http.StatusNotFound)
+		log.Print(err)
+		return
+	}
+
+	_, err = DB.Exec(`
+		UPDATE followers 
+		SET status = 'accepted' 
+		WHERE follower_id = ? AND followed_id = ? AND status = 'pending'
+	`, followedId, userID)
+	if err != nil {
+		http.Error(w, "Error accepting follow request", http.StatusInternalServerError)
+		log.Print(err)
+		return
+	}
+
+	log.Println("Follow request accepted")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Follow request accepted"})
 }
 
 // DELETE /follow/{id}
-func FollowRejectRequestHandler(w http.ResponseWriter, r *http.Request, DB *sql.DB) {
+func FollowRejectRequestHandler(w http.ResponseWriter, r *http.Request, DB *sql.DB, followedId int64) {
+	sessionToken, err := GetSessionToken(r)
+	if err != nil {
+		http.Error(w, "Invalid session token", http.StatusUnauthorized)
+		log.Print(err)
+		return
+	}
 
+	userID, err := getUserIDFromSession(sessionToken)
+	if err != nil {
+		http.Error(w, "Invalid session token", http.StatusUnauthorized)
+		log.Print(err)
+		return
+	}
+
+	var count int
+	err = DB.QueryRow("SELECT COUNT(*) FROM followers WHERE follower_id = ? AND followed_id = ? AND status = 'pending'", followedId, userID).Scan(&count)
+	if err != nil {
+		http.Error(w, "Error checking if follow request exists", http.StatusInternalServerError)
+		log.Print(err)
+		return
+	}
+	if count == 0 {
+		http.Error(w, "No follow request found", http.StatusNotFound)
+		log.Print(err)
+		return
+	}
+
+	_, err = DB.Exec("DELETE FROM followers WHERE follower_id = ? AND followed_id = ? AND status = 'pending'", followedId, userID)
+	if err != nil {
+		http.Error(w, "Error rejecting follow request", http.StatusInternalServerError)
+		log.Print(err)
+		return
+	}
+
+	log.Println("Follow request rejected")
+	w.WriteHeader(http.StatusOK)
+	json.NewEncoder(w).Encode(map[string]string{"message": "Follow request rejected"})
 }

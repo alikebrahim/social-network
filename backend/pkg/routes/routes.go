@@ -2,6 +2,7 @@ package routes
 
 import (
 	"database/sql"
+	"errors"
 	"log"
 	"net/http"
 	"strconv"
@@ -24,28 +25,36 @@ func SetupRoutes(database *sql.DB) *http.ServeMux {
 	})
 
 	mux.HandleFunc("/follow/", func(w http.ResponseWriter, r *http.Request) {
-		pathParts := strings.Split(r.URL.Path, "/")
-		if len(pathParts) < 3 {
-			http.Error(w, "Invalid URL", http.StatusBadRequest)
-			return
-		}
-		id := pathParts[2]
-		followerID, err := strconv.ParseInt(id, 10, 64)
+		followerID, err := getIdFromRoute(w, r, "follow")
 		if err != nil {
-			http.Error(w, "Invalid URL", http.StatusBadRequest)
 			log.Print(err)
+			w.WriteHeader(http.StatusBadRequest)
 			return
 		}
+
 		FollowingHandler(w, r, DB, followerID)
 	})
 	mux.HandleFunc("/follow/requests", func(w http.ResponseWriter, r *http.Request) {
 		FollowingRequestsHandler(w, r, DB)
 	})
 	mux.HandleFunc("/follow/accept/", func(w http.ResponseWriter, r *http.Request) {
-		FollowAcceptRequestHandler(w, r, DB)
+		followedID, err := getIdFromRoute(w, r, "accept")
+		if err != nil {
+			log.Print(err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+		FollowAcceptRequestHandler(w, r, DB, followedID)
 	})
 	mux.HandleFunc("/follow/reject/", func(w http.ResponseWriter, r *http.Request) {
-		FollowRejectRequestHandler(w, r, DB)
+		followedID, err := getIdFromRoute(w, r, "reject")
+		if err != nil {
+			log.Print(err)
+			w.WriteHeader(http.StatusBadRequest)
+			return
+		}
+
+		FollowRejectRequestHandler(w, r, DB, followedID)
 	})
 
 	mux.HandleFunc("/groups", func(w http.ResponseWriter, r *http.Request) {
@@ -101,3 +110,25 @@ func SetupRoutes(database *sql.DB) *http.ServeMux {
 
 	return mux
 }
+
+func getIdFromRoute(w http.ResponseWriter, r *http.Request, key string) (int64, error) {
+    pathParts := strings.Split(r.URL.Path, "/")
+    
+    for i, part := range pathParts {
+        if part == key && i+1 < len(pathParts) {
+            idStr := pathParts[i+1]
+            id, err := strconv.ParseInt(idStr, 10, 64)
+            if err != nil {
+                http.Error(w, "Invalid URL", http.StatusBadRequest)
+                log.Print(err)
+                return 0, err
+            }
+            return id, nil
+        }
+    }
+    
+    http.Error(w, "Invalid URL", http.StatusBadRequest)
+    log.Print("Key not found in URL")
+    return 0, errors.New("Invalid URL")
+}
+
