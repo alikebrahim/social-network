@@ -2,133 +2,116 @@ package routes
 
 import (
 	"database/sql"
-	"errors"
-	"log"
+	// "errors"
+	// "log"
 	"net/http"
-	"strconv"
-	"strings"
+	// "strconv"
+	// "strings"
+	"github.com/gorilla/mux"
 )
 
-func SetupRoutes(database *sql.DB) *http.ServeMux {
+func SetupRoutes(database *sql.DB) *mux.Router  {
 	DB = database
 
-	mux := http.NewServeMux()
+	r := mux.NewRouter()
 
-	mux.HandleFunc("/auth/register", func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/auth/register", func(w http.ResponseWriter, r *http.Request) {
 		RegisterHandler(w, r, DB)
-	})
-	mux.HandleFunc("/auth/login", func(w http.ResponseWriter, r *http.Request) {
+	}).Methods("POST")
+	r.HandleFunc("/auth/login", func(w http.ResponseWriter, r *http.Request) {
 		LoginHandler(w, r, DB)
-	})
-	mux.HandleFunc("/auth/logout", func(w http.ResponseWriter, r *http.Request) {
+	}).Methods("POST")
+	r.HandleFunc("/auth/logout", func(w http.ResponseWriter, r *http.Request) {
 		LogoutHandler(w, r, DB)
-	})
+	}).Methods("POST")
 
-	mux.HandleFunc("/follow/", func(w http.ResponseWriter, r *http.Request) {
-		followerID, err := getIdFromRoute(w, r, "follow")
-		if err != nil {
-			log.Print(err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
 
-		FollowingHandler(w, r, DB, followerID)
-	})
-	mux.HandleFunc("/follow/requests", func(w http.ResponseWriter, r *http.Request) {
+	r.HandleFunc("/follow/{id}", func(w http.ResponseWriter, r *http.Request) {
+		FollowingHandler(w, r, DB)
+	}).Methods("POST")
+	r.HandleFunc("/follow/requests", func(w http.ResponseWriter, r *http.Request) {
 		FollowingRequestsHandler(w, r, DB)
-	})
-	mux.HandleFunc("/follow/accept/", func(w http.ResponseWriter, r *http.Request) {
-		followedID, err := getIdFromRoute(w, r, "accept")
-		if err != nil {
-			log.Print(err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
-		FollowAcceptRequestHandler(w, r, DB, followedID)
-	})
-	mux.HandleFunc("/follow/reject/", func(w http.ResponseWriter, r *http.Request) {
-		followedID, err := getIdFromRoute(w, r, "reject")
-		if err != nil {
-			log.Print(err)
-			w.WriteHeader(http.StatusBadRequest)
-			return
-		}
+	}).Methods("GET")
+	r.HandleFunc("/follow/accept/{id}", func(w http.ResponseWriter, r *http.Request) {
+		FollowAcceptRequestHandler(w, r, DB)
+	}).Methods("POST")
+	r.HandleFunc("/follow/reject/{id}", func(w http.ResponseWriter, r *http.Request) {
+		FollowRejectRequestHandler(w, r, DB)
+	}).Methods("DELETE")
 
-		FollowRejectRequestHandler(w, r, DB, followedID)
-	})
-
-	mux.HandleFunc("/groups", func(w http.ResponseWriter, r *http.Request) {
+	// ✅ GROUPS HANDLERS
+	r.HandleFunc("/groups", func(w http.ResponseWriter, r *http.Request) {
 		GroupCreateHandler(w, r, DB)
-	})
-	mux.HandleFunc("/groups/invite/", func(w http.ResponseWriter, r *http.Request) {
+	}).Methods("POST")
+	r.HandleFunc("/groups/{id}/invite", func(w http.ResponseWriter, r *http.Request) {
 		GroupInviteHandler(w, r, DB)
-	})
-	mux.HandleFunc("/groups/search", func(w http.ResponseWriter, r *http.Request) {
+	}).Methods("POST")
+	r.HandleFunc("/groups/search", func(w http.ResponseWriter, r *http.Request) {
 		GroupSearchHandler(w, r, DB)
-	})
-	mux.HandleFunc("/groups/join/", func(w http.ResponseWriter, r *http.Request) {
+	}).Methods("GET")
+	r.HandleFunc("/groups/{id}/join", func(w http.ResponseWriter, r *http.Request) {
 		GroupRequestHandler(w, r, DB)
-	})
-	mux.HandleFunc("/groups/requests/", func(w http.ResponseWriter, r *http.Request) {
+	}).Methods("POST")
+	r.HandleFunc("/groups/{id}/requests", func(w http.ResponseWriter, r *http.Request) {
 		GroupListRequestsHandler(w, r, DB)
-	})
-	mux.HandleFunc("/groups/requests/accept/", func(w http.ResponseWriter, r *http.Request) {
+	}).Methods("GET")
+	r.HandleFunc("/groups/{id}/requests/{userId}/accept", func(w http.ResponseWriter, r *http.Request) {
 		GroupAcceptRequestHandler(w, r, DB)
-	})
-	mux.HandleFunc("/groups/events/", func(w http.ResponseWriter, r *http.Request) {
+	}).Methods("POST")
+	r.HandleFunc("/groups/{id}/events", func(w http.ResponseWriter, r *http.Request) {
 		GroupCreateEventHandler(w, r, DB)
-	})
+	}).Methods("POST")
 
-	mux.HandleFunc("/posts", func(w http.ResponseWriter, r *http.Request) {
+	// ✅ POSTS HANDLERS
+	r.HandleFunc("/posts", func(w http.ResponseWriter, r *http.Request) {
 		PostCreateHandler(w, r, DB)
-	})
-	mux.HandleFunc("/posts/", func(w http.ResponseWriter, r *http.Request) {
+	}).Methods("POST")
+	r.HandleFunc("/posts/{id}", func(w http.ResponseWriter, r *http.Request) {
 		PostsGetHandler(w, r, DB)
-	})
-	mux.HandleFunc("/posts/edit/", func(w http.ResponseWriter, r *http.Request) {
+	}).Methods("GET")
+	r.HandleFunc("/posts/{id}", func(w http.ResponseWriter, r *http.Request) {
 		PostEditHandler(w, r, DB)
-	})
-	mux.HandleFunc("/posts/delete/", func(w http.ResponseWriter, r *http.Request) {
+	}).Methods("PUT")
+	r.HandleFunc("/posts/{id}", func(w http.ResponseWriter, r *http.Request) {
 		PostDeleteHandler(w, r, DB)
-	})
-	mux.HandleFunc("/posts/comments/", func(w http.ResponseWriter, r *http.Request) {
+	}).Methods("DELETE")
+	r.HandleFunc("/posts/{id}/comments", func(w http.ResponseWriter, r *http.Request) {
 		PostCommentHandler(w, r, DB)
-	})
-	mux.HandleFunc("/posts/likes/", func(w http.ResponseWriter, r *http.Request) {
+	}).Methods("POST")
+	r.HandleFunc("/posts/{id}/likes", func(w http.ResponseWriter, r *http.Request) {
 		PostLikeHandler(w, r, DB)
-	})
+	}).Methods("POST")
 
-	mux.HandleFunc("/profiles/", func(w http.ResponseWriter, r *http.Request) {
+	// ✅ PROFILES HANDLERS
+	r.HandleFunc("/profiles/{id}", func(w http.ResponseWriter, r *http.Request) {
 		ProfileGetHandler(w, r, DB)
-	})
-	mux.HandleFunc("/profiles/privacy", func(w http.ResponseWriter, r *http.Request) {
+	}).Methods("GET")
+	r.HandleFunc("/profiles/privacy", func(w http.ResponseWriter, r *http.Request) {
 		ProfileSetPrivacyHandler(w, r, DB)
-	})
-	mux.HandleFunc("/profiles/activity/", func(w http.ResponseWriter, r *http.Request) {
+	}).Methods("PUT")
+	r.HandleFunc("/profiles/{id}/activity", func(w http.ResponseWriter, r *http.Request) {
 		ProfileGetActivitiHandler(w, r, DB)
-	})
-
-	return mux
+	}).Methods("GET")
+	return r
 }
 
-func getIdFromRoute(w http.ResponseWriter, r *http.Request, key string) (int64, error) {
-    pathParts := strings.Split(r.URL.Path, "/")
-    
-    for i, part := range pathParts {
-        if part == key && i+1 < len(pathParts) {
-            idStr := pathParts[i+1]
-            id, err := strconv.ParseInt(idStr, 10, 64)
-            if err != nil {
-                http.Error(w, "Invalid URL", http.StatusBadRequest)
-                log.Print(err)
-                return 0, err
-            }
-            return id, nil
-        }
-    }
-    
-    http.Error(w, "Invalid URL", http.StatusBadRequest)
-    log.Print("Key not found in URL")
-    return 0, errors.New("Invalid URL")
-}
+// func getIdFromRoute(w http.ResponseWriter, r *http.Request, key string) (int64, error) {
+// 	pathParts := strings.Split(r.URL.Path, "/")
 
+// 	for i, part := range pathParts {
+// 		if part == key && i+1 < len(pathParts) {
+// 			idStr := pathParts[i+1]
+// 			id, err := strconv.ParseInt(idStr, 10, 64)
+// 			if err != nil {
+// 				http.Error(w, "Invalid URL", http.StatusBadRequest)
+// 				log.Print(err)
+// 				return 0, err
+// 			}
+// 			return id, nil
+// 		}
+// 	}
+
+// 	http.Error(w, "Invalid URL", http.StatusBadRequest)
+// 	log.Print("Key not found in URL")
+// 	return 0, errors.New("Invalid URL")
+// }

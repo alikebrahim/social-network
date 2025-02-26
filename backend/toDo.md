@@ -1,5 +1,6 @@
 # API Endpoints:
 ## Authentication (/auth)
+done 
 ---
 #### - POST /auth/register
     - Process: Register a new user with email, password, name, date of birth, and optional fields like avatar. Hash the password using bcrypt, generate a UUID for user ID, and store in the database. Return session token.
@@ -33,6 +34,7 @@
     - Process: Like a post. Handle notifications for this action via WebSocket.
         
 ## Following  (/following)
+Done
 ---
 #### - POST /follow/{id}
     - Process: Request to follow another user. If the profile is public, automatically approve; otherwise, create a pending request.
