@@ -5,32 +5,40 @@ import (
 	"encoding/json"
 	"log"
 	"net/http"
+	"strconv"
 
+	"github.com/gorilla/mux"
 )
 
 type follow struct {
-	FollowerID int64    `json:"follower_id"`
-	FollowedID int64    `json:"followed_id"`
+	FollowerID int64  `json:"follower_id"`
+	FollowedID int64  `json:"followed_id"`
 	Status     string `json:"status"`
 	Followers  []User `json:"followers"`
 }
 
 // FOLLOWING HANDLERS
 // POST /follow/{id}
-func FollowingHandler(w http.ResponseWriter, r *http.Request, DB *sql.DB, followedID int64) {
+func  FollowingHandler(w http.ResponseWriter, r *http.Request, DB *sql.DB) {
 	//var user User
 	var follow follow
 
+	vars := mux.Vars(r)
+	followedID, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		log.Print(err)
+		return
+	}
 	follow.FollowedID = followedID
 
-	err := json.NewDecoder(r.Body).Decode(&follow)
+	err = json.NewDecoder(r.Body).Decode(&follow)
 	if err != nil {
 		http.Error(w, "Invalid request body", http.StatusBadRequest)
 		return
 	}
 
 	//followedID := follow.FollowedID
-	
 
 	sessionToken, err := GetSessionToken(r)
 	if err != nil {
@@ -40,7 +48,6 @@ func FollowingHandler(w http.ResponseWriter, r *http.Request, DB *sql.DB, follow
 	}
 
 	log.Println(sessionToken)
-
 
 	follow.FollowerID, err = getUserIDFromSession(sessionToken)
 	if err != nil {
@@ -90,9 +97,9 @@ func FollowingHandler(w http.ResponseWriter, r *http.Request, DB *sql.DB, follow
 	if status == "accepted" {
 		response["message"] = "Follow request accepted"
 	}
-	
+
 	w.WriteHeader(http.StatusOK)
-    json.NewEncoder(w).Encode(response)
+	json.NewEncoder(w).Encode(response)
 }
 
 // GET /follow/requests
@@ -116,35 +123,42 @@ func FollowingRequestsHandler(w http.ResponseWriter, r *http.Request, DB *sql.DB
 		JOIN users u ON f.follower_id = u.id  -- Fixed JOIN condition
 		WHERE f.followed_id = ? AND f.status = 'pending'
 `, user.ID)
-if err != nil {
-	http.Error(w, "Error getting follower requests", http.StatusInternalServerError)
-	log.Print(err)
-	return
-}
-var followRequests []User
-for rows.Next() {
-	var follower User
-	err := rows.Scan(&follower.ID, &follower.FirstName, &follower.LastName, &follower.Nickname, &follower.Avatar)
 	if err != nil {
-		log.Println("Error scanning row:", err)
-		continue
+		http.Error(w, "Error getting follower requests", http.StatusInternalServerError)
+		log.Print(err)
+		return
 	}
-	followRequests = append(followRequests, follower)
-}
+	var followRequests []User
+	for rows.Next() {
+		var follower User
+		err := rows.Scan(&follower.ID, &follower.FirstName, &follower.LastName, &follower.Nickname, &follower.Avatar)
+		if err != nil {
+			log.Println("Error scanning row:", err)
+			continue
+		}
+		followRequests = append(followRequests, follower)
+	}
 
-if len(followRequests) == 0 {
-	log.Println("No follow requests found")
+	if len(followRequests) == 0 {
+		log.Println("No follow requests found")
+		w.WriteHeader(http.StatusOK)
+		json.NewEncoder(w).Encode([]User{})
+		return
+	}
+	log.Println("Pending follow requests retrieved:", followRequests)
 	w.WriteHeader(http.StatusOK)
-	json.NewEncoder(w).Encode([]User{})
-	return
-}
-log.Println("Pending follow requests retrieved:", followRequests)
-w.WriteHeader(http.StatusOK)
-json.NewEncoder(w).Encode(followRequests)
+	json.NewEncoder(w).Encode(followRequests)
 }
 
 // POST /follow/{id}/accept
-func FollowAcceptRequestHandler(w http.ResponseWriter, r *http.Request, DB *sql.DB, followedId int64) {
+func FollowAcceptRequestHandler(w http.ResponseWriter, r *http.Request, DB *sql.DB) {
+	vars := mux.Vars(r)
+	followedId, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		log.Print(err)
+		return
+	}
 	sessionToken, err := GetSessionToken(r)
 	if err != nil {
 		http.Error(w, "Invalid session token", http.StatusUnauthorized)
@@ -190,7 +204,15 @@ func FollowAcceptRequestHandler(w http.ResponseWriter, r *http.Request, DB *sql.
 }
 
 // DELETE /follow/{id}
-func FollowRejectRequestHandler(w http.ResponseWriter, r *http.Request, DB *sql.DB, followedId int64) {
+func FollowRejectRequestHandler(w http.ResponseWriter, r *http.Request, DB *sql.DB) {
+	log.Println("Rejecting follow request")
+	vars := mux.Vars(r)
+	followerId, err := strconv.ParseInt(vars["id"], 10, 64)
+	if err != nil {
+		http.Error(w, "Invalid user ID", http.StatusBadRequest)
+		log.Print(err)
+		return
+	}
 	sessionToken, err := GetSessionToken(r)
 	if err != nil {
 		http.Error(w, "Invalid session token", http.StatusUnauthorized)
@@ -198,27 +220,30 @@ func FollowRejectRequestHandler(w http.ResponseWriter, r *http.Request, DB *sql.
 		return
 	}
 
-	userID, err := getUserIDFromSession(sessionToken)
+	followedId, err := getUserIDFromSession(sessionToken)
 	if err != nil {
 		http.Error(w, "Invalid session token", http.StatusUnauthorized)
 		log.Print(err)
 		return
 	}
 
+
 	var count int
-	err = DB.QueryRow("SELECT COUNT(*) FROM followers WHERE follower_id = ? AND followed_id = ? AND status = 'pending'", followedId, userID).Scan(&count)
+	err = DB.QueryRow("SELECT COUNT(*) FROM followers WHERE follower_id = ? AND followed_id = ? AND status = 'pending'", followerId, followedId).Scan(&count)
 	if err != nil {
 		http.Error(w, "Error checking if follow request exists", http.StatusInternalServerError)
+		log.Print("gg")
 		log.Print(err)
 		return
 	}
+	log.Println("Count:", count)
 	if count == 0 {
 		http.Error(w, "No follow request found", http.StatusNotFound)
 		log.Print(err)
 		return
 	}
 
-	_, err = DB.Exec("DELETE FROM followers WHERE follower_id = ? AND followed_id = ? AND status = 'pending'", followedId, userID)
+	_, err = DB.Exec("DELETE FROM followers WHERE follower_id = ? AND followed_id = ? AND status = 'pending'", followerId, followedId)
 	if err != nil {
 		http.Error(w, "Error rejecting follow request", http.StatusInternalServerError)
 		log.Print(err)
