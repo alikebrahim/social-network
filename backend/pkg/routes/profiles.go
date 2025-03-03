@@ -8,7 +8,7 @@ import (
 // PROFILES HANDLERS
 // GET /profiles/{id}
 func ProfileGetHandler(w http.ResponseWriter, r *http.Request, DB *sql.DB) {
-	
+
 }
 
 // PUT /profiles/privacy
