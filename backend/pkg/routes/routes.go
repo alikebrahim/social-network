@@ -67,6 +67,7 @@ func SetupRoutes(database *sql.DB) *mux.Router  {
 		PostCreateHandler(w, r, DB)
 	}).Methods("POST")
 	r.HandleFunc("/posts/{id}", func(w http.ResponseWriter, r *http.Request) {
+		// is't suposed the id geting it from the cookies why the id in the url?
 		PostsGetHandler(w, r, DB)
 	}).Methods("GET")
 	r.HandleFunc("/posts/{id}", func(w http.ResponseWriter, r *http.Request) {
