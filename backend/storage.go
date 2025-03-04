@@ -13,6 +13,9 @@ import (
 type Storage interface {
 	// USER ACCOUNTS
 	CreateUserAccount(*UserAccount) (id int64, err error)
+	GetSeesionToken(int64) (string, error)
+	AuthenticateUser(string, string) (string, error)
+	DeleteSession(string) error
 	// DeleteUserAccount(int) error
 	// EditUserAccount(*UserAccount) error
 	// GetUserAccountByID(int) (*UserAccount, error)

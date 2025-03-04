@@ -1,6 +1,6 @@
 -- +goose Up
 CREATE TABLE groups (
-    id SERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     creator_id INTEGER NOT NULL,
     title TEXT NOT NULL,
     description TEXT NOT NULL,

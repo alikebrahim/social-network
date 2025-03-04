@@ -1,6 +1,6 @@
 -- +goose Up
 CREATE TABLE event_responses (
-    id SERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     event_id INTEGER NOT NULL,
     user_id INTEGER NOT NULL,
     response TEXT NOT NULL,

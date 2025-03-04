@@ -1,6 +1,6 @@
 -- +goose Up
 CREATE TABLE posts (
-    id SERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     user_id INTEGER NOT NULL,
     content TEXT NOT NULL,
     image TEXT,

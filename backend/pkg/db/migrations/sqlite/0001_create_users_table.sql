@@ -1,6 +1,6 @@
 -- +goose Up
-CREATE TABLE accounts (
-    id SERIAL PRIMARY KEY,
+CREATE TABLE users (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     email TEXT UNIQUE NOT NULL,
     password TEXT NOT NULL,
     first_name TEXT NOT NULL,
@@ -15,4 +15,4 @@ CREATE TABLE accounts (
 );
 
 -- +goose Down
-DROP TABLE accounts;
+DROP TABLE users;

@@ -1,34 +1,53 @@
 package main
 
-import "fmt"
+import (
+	"log"
 
-func (s *SQLiteStore) CreateUserAccount(usrAcc *UserAccount) (id int64, err error) {
-	query := `INSERT INTO accounts (email, password, first_name, last_name, date_of_birth, avatar, nickname, about_me, profile_type)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-	res, err := s.db.Exec(query,
-		usrAcc.Email,
-		usrAcc.Password,
-		usrAcc.First_name,
-		usrAcc.Last_name,
-		usrAcc.Date_of_birth,
-		usrAcc.Avatar,
-		usrAcc.Nickname,
-		usrAcc.About_me,
-		usrAcc.Profile_type,
-	)
+	"golang.org/x/crypto/bcrypt"
+)
+
+func (s *SQLiteStore) CreateUserAccount(user *UserAccount) (id int64, err error) {
+	log.Print("1")
+	hashedPass, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 	if err != nil {
-		fmt.Println("db exec: ", err)
+		log.Print("bcrypt.GenerateFromPassword: ", err)
+		return 0, err
+	}
+	log.Print("2")
+
+	user.Password = string(hashedPass)
+	qurey := `INSERT INTO users (email, password, first_name, last_name, date_of_birth, avatar, nickname, about_me, profile_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+	if user.Profile_type == "" {
+		user.Profile_type = "public"
+	}
+
+	log.Print("user: ", user.Email)
+	res, err := s.db.Exec(qurey, user.Email, user.Password, user.First_name, user.Last_name, user.Date_of_birth, user.Avatar, user.Nickname, user.About_me, user.Profile_type)
+	if err != nil {
+		log.Print("s.db.Exec: ", err)
 		return 0, err
 	}
 
-	// ID for inserted usrAcc
-	id, err = res.LastInsertId()
+	userID, err := res.LastInsertId()
 	if err != nil {
+		log.Print("res.LastInsertId: ", err)
 		return 0, err
 	}
 
-	fmt.Printf("Inserted with ID: %d\n", id)
-	return id, nil
+	sessionToken, err := generateSessionToken()
+	if err != nil {
+		log.Print("generateSessionToken: ", err)
+		return 0, err
+	}
+
+	qurey = `INSERT INTO sessions (user_id, session_token) VALUES (?, ?)`
+	_, err = s.db.Exec(qurey, userID, sessionToken)
+	if err != nil {
+		log.Print("s.db.Exec: ", err)
+		return 0, err
+	}
+
+	return userID, nil
 }
 
 func (s *SQLiteStore) EditUserAccount(usrAcc *UserAccount) error {
@@ -106,3 +125,67 @@ func (s *SQLiteStore) GetUserAccounts() ([]*UserAccount, error) {
 	}
 	return accounts, nil
 }
+
+func (s *SQLiteStore) AuthenticateUser(email string, password string) (string, error) {
+	// Check if the user exists
+	query := `SELECT id, password FROM users WHERE email = ?`
+	var hashedPassword string
+	var userID int64
+	err := s.db.QueryRow(query, email).Scan(&userID, &hashedPassword)
+	if err != nil {
+		log.Print("s.db.QueryRow: ", err)
+		return "", err
+	}
+	// Compare the stored hashed password with the one provided
+	if err := bcrypt.CompareHashAndPassword([]byte(hashedPassword), []byte(password)); err != nil {
+		log.Print("bcrypt.CompareHashAndPassword: ", err)
+		return "", err
+	}
+
+	// Generate a new session token
+	var sessionToken string
+	query = `SELECT session_token FROM sessions WHERE user_id = ?`
+	err = s.db.QueryRow(query, userID).Scan(&sessionToken)
+
+	if err != nil { // No existing session, generate a new one
+		sessionToken, err = generateSessionToken()
+		if err != nil {
+			log.Print("generateSessionToken: ", err)
+			return "", err
+		}
+
+		// Insert the new session
+		query = `INSERT INTO sessions (user_id, session_token) VALUES (?, ?)`
+		_, err = s.db.Exec(query, userID, sessionToken)
+		if err != nil {
+			log.Print("s.db.Exec: ", err)
+			return "", err
+		}
+	}
+
+	return sessionToken, nil
+}
+
+
+func (s *SQLiteStore) GetSeesionToken(usrID int64) (string, error) {
+	query := `SELECT session_token FROM sessions WHERE user_id = ?`
+	row := s.db.QueryRow(query, usrID)
+
+	var sessionToken string
+	err := row.Scan(&sessionToken)
+	if err != nil {
+		return "", err
+	}
+	return sessionToken, nil
+}
+
+
+func (s *SQLiteStore) DeleteSession(sessionToken string) error {
+	qurrey := `DELETE FROM sessions WHERE session_token = ?`
+	_, err := s.db.Exec(qurrey, sessionToken)
+	if err != nil {
+		return err
+	}
+	return nil
+}
+	

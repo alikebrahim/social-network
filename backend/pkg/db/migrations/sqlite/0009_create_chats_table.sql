@@ -1,6 +1,6 @@
 -- +goose Up
 CREATE TABLE chats (
-    id SERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     sender_id INTEGER NOT NULL,
     receiver_id INTEGER NOT NULL,
     content TEXT,
