@@ -166,7 +166,6 @@ func (s *SQLiteStore) AuthenticateUser(email string, password string) (string, e
 	return sessionToken, nil
 }
 
-
 func (s *SQLiteStore) GetSeesionToken(usrID int64) (string, error) {
 	query := `SELECT session_token FROM sessions WHERE user_id = ?`
 	row := s.db.QueryRow(query, usrID)
@@ -179,7 +178,6 @@ func (s *SQLiteStore) GetSeesionToken(usrID int64) (string, error) {
 	return sessionToken, nil
 }
 
-
 func (s *SQLiteStore) DeleteSession(sessionToken string) error {
 	qurrey := `DELETE FROM sessions WHERE session_token = ?`
 	_, err := s.db.Exec(qurrey, sessionToken)
@@ -188,4 +186,47 @@ func (s *SQLiteStore) DeleteSession(sessionToken string) error {
 	}
 	return nil
 }
-	
+
+func (s *SQLiteStore) AddTestAccount() error {
+	users := []struct {
+		Email         string
+		Password      string
+		First_name    string
+		Last_name     string
+		Date_of_birth string
+		Avatar        string
+		Nickname      string
+		About_me      string
+		Profile_type  string
+	}{
+		{"test1@example.com", "password123", "John", "Doe", "1990-01-01", "avatar1.png", "johndoe", "About John", "public"},
+		{"test2@example.com", "password123", "Jane", "Smith", "1992-05-10", "avatar2.png", "janesmith", "About Jane", "private"},
+		{"test3@example.com", "password123", "Mike", "Johnson", "1988-07-22", "avatar3.png", "mikej", "About Mike", "public"},
+		{"test4@example.com", "password123", "Emily", "Davis", "1995-09-30", "avatar4.png", "emilyd", "About Emily", "public"},
+		{"test5@example.com", "password123", "Robert", "Brown", "1985-11-15", "avatar5.png", "robb", "About Robert", "private"},
+		{"test6@example.com", "password123", "Laura", "Wilson", "1998-04-25", "avatar6.png", "lauraw", "About Laura", "public"},
+		{"test7@example.com", "password123", "Chris", "Miller", "1993-08-12", "avatar7.png", "chrism", "About Chris", "private"},
+		{"test8@example.com", "password123", "Sophia", "Anderson", "1997-06-19", "avatar8.png", "sophiaa", "About Sophia", "public"},
+		{"test9@example.com", "password123", "David", "Thomas", "1989-03-14", "avatar9.png", "davidth", "About David", "public"},
+		{"test10@example.com", "password123", "Olivia", "Martinez", "1994-02-27", "avatar10.png", "oliviam", "About Olivia", "private"},
+		{"test11@example.com", "password123", "Daniel", "Garcia", "1991-11-05", "avatar11.png", "danielg", "About Daniel", "public"},
+		{"test12@example.com", "password123", "Ella", "Rodriguez", "1996-07-08", "avatar12.png", "ellar", "About Ella", "public"},
+		{"test13@example.com", "password123", "James", "Hernandez", "1990-09-21", "avatar13.png", "jamesh", "About James", "private"},
+		{"test14@example.com", "password123", "Ava", "Lopez", "1999-01-17", "avatar14.png", "avalo", "About Ava", "public"},
+		{"test15@example.com", "password123", "William", "Clark", "1987-12-09", "avatar15.png", "williamc", "About William", "public"},
+	}
+	for _, users := range users {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(users.Password), bcrypt.DefaultCost)
+		if err != nil {
+			return err
+		}
+		qurrey := `INSERT INTO users (email, password, first_name, last_name, date_of_birth, avatar, nickname, about_me, profile_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		_, err = s.db.Exec(qurrey, users.Email, string(hashedPassword), users.First_name, users.Last_name, users.Date_of_birth, users.Avatar, users.Nickname, users.About_me, users.Profile_type)
+		if err != nil {
+			log.Print("s.db.Exec: ", err)
+			return err
+		}
+	}
+	log.Print("Test accounts added")
+	return nil
+}

@@ -11,11 +11,14 @@ import (
 // goose -dir migrationsDir sqlite3 down
 
 type Storage interface {
+	// test data
+	AddTestAccount() error
 	// USER ACCOUNTS
 	CreateUserAccount(*UserAccount) (id int64, err error)
 	GetSeesionToken(int64) (string, error)
 	AuthenticateUser(string, string) (string, error)
 	DeleteSession(string) error
+
 	// DeleteUserAccount(int) error
 	// EditUserAccount(*UserAccount) error
 	// GetUserAccountByID(int) (*UserAccount, error)
