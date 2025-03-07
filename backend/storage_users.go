@@ -3,7 +3,7 @@ package main
 import "fmt"
 
 func (s *SQLiteStore) CreateUserAccount(usrAcc *UserAccount) (id int64, err error) {
-	query := `INSERT INTO accounts (email, password, first_name, last_name, date_of_birth, avatar, nickname, about_me, profile_type)
+	query := `INSERT INTO users (email, password, first_name, last_name, date_of_birth, avatar, nickname, about_me, profile_type)
               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
 	res, err := s.db.Exec(query,
 		usrAcc.Email,
@@ -33,7 +33,7 @@ func (s *SQLiteStore) CreateUserAccount(usrAcc *UserAccount) (id int64, err erro
 
 func (s *SQLiteStore) EditUserAccount(usrAcc *UserAccount) error {
 	// NOTE: should profile update be restricted (which attrs?)?
-	query := `UPDATE account SET email = ?, password = ?, first_name = ?, last_name = ?, date_of_birth = ?, avatar = ?, nickname = ?, about_me = ?, profile_type = ?, bio = ? WHERE id = ?`
+	query := `UPDATE users SET email = ?, password = ?, first_name = ?, last_name = ?, date_of_birth = ?, avatar = ?, nickname = ?, about_me = ?, profile_type = ? WHERE id = ?`
 	_, err := s.db.Exec(query,
 		usrAcc.Email,
 		usrAcc.Password,
@@ -44,23 +44,24 @@ func (s *SQLiteStore) EditUserAccount(usrAcc *UserAccount) error {
 		usrAcc.Nickname,
 		usrAcc.About_me,
 		usrAcc.Profile_type,
+		usrAcc.ID,
 	)
 	return err
 }
 
 func (s *SQLiteStore) DeleteUserAccount(usrID int) error {
-	query := `DELETE FROM account WHERE id = ?`
+	query := `DELETE FROM users WHERE id = ?`
 	_, err := s.db.Exec(query, usrID)
 	return err
 }
 
 func (s *SQLiteStore) GetUserAccountByID(usrID int) (*UserAccount, error) {
-	//NOTE: edit query
-	query := `SELECT email, password, first_name, last_name, date_of_birth, avatar, nickname, about_me, profile_type FROM account WHERE id = ?`
+	query := `SELECT id, email, password, first_name, last_name, date_of_birth, avatar, nickname, about_me, profile_type FROM users WHERE id = ?`
 	row := s.db.QueryRow(query, usrID)
 
 	userAccount := new(UserAccount)
 	err := row.Scan(
+		&userAccount.ID,
 		&userAccount.Email,
 		&userAccount.Password,
 		&userAccount.First_name,
@@ -78,8 +79,7 @@ func (s *SQLiteStore) GetUserAccountByID(usrID int) (*UserAccount, error) {
 }
 
 func (s *SQLiteStore) GetUserAccounts() ([]*UserAccount, error) {
-	//NOTE: edit query
-	rows, err := s.db.Query("SELECT email, password, first_name, last_name, date_of_birth, avatar, nickname, about_me, profile_type FROM account")
+	rows, err := s.db.Query("SELECT id, email, password, first_name, last_name, date_of_birth, avatar, nickname, about_me, profile_type FROM users")
 	if err != nil {
 		return nil, err
 	}
@@ -89,6 +89,7 @@ func (s *SQLiteStore) GetUserAccounts() ([]*UserAccount, error) {
 	for rows.Next() {
 		userAccount := new(UserAccount)
 		err := rows.Scan(
+			&userAccount.ID,
 			&userAccount.Email,
 			&userAccount.Password,
 			&userAccount.First_name,

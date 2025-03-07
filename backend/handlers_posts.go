@@ -13,13 +13,24 @@ func (s *APIServer) HandlePostCreate(w http.ResponseWriter, r *http.Request) err
 		return err
 	}
 
-	id, err := s.store.CreatePost(post)
+	// Get user ID from session
+	userID, err := s.getUserIDFromSession(r)
+	if err != nil {
+		return ErrUnauthorized
+	}
+
+	// Set the user ID
+	post.UserID = userID
+	
+	id, err := s.store.CreatePost(&post)
 	if err != nil {
 		return err
 	}
 
-	WriteJson(w, http.StatusCreated, id)
-
+	// Set the ID in the response
+	post.ID = id
+	
+	WriteJson(w, http.StatusCreated, post)
 	return nil
 }
 

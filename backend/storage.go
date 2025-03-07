@@ -20,7 +20,8 @@ type Storage interface {
 	// GetUserAccounts() ([]*UserAccount, error)
 
 	// POSTS
-	CreatePost(Post) (id int64, err error)
+	CreatePost(*Post) (id int64, err error)
+
 	// GROUPS
 	CreateGroup(userID int64, group *CreateGroupRequest) (int64, error)
 	GetGroup(groupID int64) (*Group, error)
@@ -52,6 +53,14 @@ type Storage interface {
 	CreateGroupPost(groupID, userID int64, post *Post) (int64, error)
 	GetGroupPosts(groupID int64) ([]*Post, error)
 	
+	// CHAT
+	SaveChat(chat *Chat) (int64, error)
+	GetUserChats(userID int64) ([]*Chat, error)
+	GetChatHistory(userID1, userID2 int64) ([]*Chat, error)
+	
+	// GROUP CHAT
+	SaveGroupChat(chat *GroupChat) (int64, error)
+	GetGroupChatHistory(groupID int64) ([]*GroupChat, error)
 }
 
 type SQLiteStore struct {

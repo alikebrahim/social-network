@@ -113,6 +113,21 @@ func (s *APIServer) Run() {
 	// GET /profiles/{id}/activity
 	mux.HandleFunc("GET /profiles/{id}/activity", makeHTTPHandleFunc(s.HandleProfileGetActivity))
 
+	// CHAT HANDLERS
+	// GET /chats
+	mux.HandleFunc("GET /chats", makeHTTPHandleFunc(s.HandleGetChats))
+	// GET /chats/{userId}
+	mux.HandleFunc("GET /chats/{userId}", makeHTTPHandleFunc(s.HandleGetChatHistory))
+	
+	// WebSocket handlers (these do not use makeHTTPHandleFunc)
+	// WebSocket /ws/chat/{userId}
+	mux.HandleFunc("/ws/chat/{userId}", s.HandleChatWebSocket)
+	// WebSocket /ws/groups/{id}/chat
+	mux.HandleFunc("/ws/groups/{id}/chat", s.HandleGroupChatWebSocket)
+
+	// Start the WebSocket hub in a goroutine
+	go hub.Run()
+
 	log.Println("Server running on port: ", s.listenAddr)
 	log.Fatal(http.ListenAndServe(s.listenAddr, mux))
 }
