@@ -99,3 +99,13 @@ func generateSessionToken() (string, error) {
 	return hex.EncodeToString(bytes), nil
 }
 
+func getSessionToken(r *http.Request) (string, error) {
+	log.Print("r.Cookies: ", r.Cookies())
+	cookie, err := r.Cookie("session_token")
+	if err != nil {
+		return "", err
+	}
+	log.Print("cookie: ", cookie)
+	return cookie.Value, nil
+}
+

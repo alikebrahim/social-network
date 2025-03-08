@@ -18,6 +18,15 @@ type Storage interface {
 	GetSeesionToken(int64) (string, error)
 	AuthenticateUser(string, string) (string, error)
 	DeleteSession(string) error
+	GetUserIdBySession(string) (int64, error)
+
+	// follow requests
+	CreateFollowRequest(follow) error
+	AcceptFollowRequest(int64, int64) error
+	DeleteFollowRequest(int64, int64) error
+	GetFollowRequests(int64) ([]UserAccount, error)
+	
+	
 
 	// DeleteUserAccount(int) error
 	// EditUserAccount(*UserAccount) error

@@ -215,18 +215,64 @@ func (s *SQLiteStore) AddTestAccount() error {
 		{"test14@example.com", "password123", "Ava", "Lopez", "1999-01-17", "avatar14.png", "avalo", "About Ava", "public"},
 		{"test15@example.com", "password123", "William", "Clark", "1987-12-09", "avatar15.png", "williamc", "About William", "public"},
 	}
-	for _, users := range users {
-		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(users.Password), bcrypt.DefaultCost)
+
+	var userIDs []struct {
+		ID          int64
+		ProfileType string
+	}
+
+	for _, user := range users {
+		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 		if err != nil {
 			return err
 		}
-		qurrey := `INSERT INTO users (email, password, first_name, last_name, date_of_birth, avatar, nickname, about_me, profile_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-		_, err = s.db.Exec(qurrey, users.Email, string(hashedPassword), users.First_name, users.Last_name, users.Date_of_birth, users.Avatar, users.Nickname, users.About_me, users.Profile_type)
+		query := `INSERT INTO users (email, password, first_name, last_name, date_of_birth, avatar, nickname, about_me, profile_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
+		res, err := s.db.Exec(query, user.Email, string(hashedPassword), user.First_name, user.Last_name, user.Date_of_birth, user.Avatar, user.Nickname, user.About_me, user.Profile_type)
 		if err != nil {
 			log.Print("s.db.Exec: ", err)
 			return err
 		}
+		userID, err := res.LastInsertId()
+		if err != nil {
+			return err
+		}
+		userIDs = append(userIDs, struct {
+			ID          int64
+			ProfileType string
+		}{userID, user.Profile_type})
 	}
-	log.Print("Test accounts added")
+
+	// Make all users follow each other with privacy logic
+	for _, follower := range userIDs {
+		for _, followee := range userIDs {
+			if follower.ID != followee.ID { // Prevent self-following
+				status := "accepted"
+				if followee.ProfileType == "private" {
+					status = "pending"
+				}
+				query := `INSERT INTO followers (follower_id, followed_id, status) VALUES (?, ?, ?)`
+				_, err := s.db.Exec(query, follower.ID, followee.ID, status)
+				if err != nil {
+					log.Print("s.db.Exec (followers): ", err)
+					return err
+				}
+			}
+		}
+	}
+
+	log.Print("Test accounts added and linked as followers")
 	return nil
+}
+
+
+func (s *SQLiteStore) GetUserIdBySession(session string) (int64, error) {
+	log.Print("session: ", session)
+	query := `SELECT user_id FROM sessions WHERE session_token = ?`
+	var userID int64
+	err := s.db.QueryRow(query, session).Scan(&userID)
+	if err != nil {
+		return 0, err
+	}
+	log.Print("userID: ", userID)
+	return userID, nil
 }
