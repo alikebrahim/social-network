@@ -2,6 +2,8 @@ package main
 
 import (
 	"encoding/json"
+	"errors"
+	"log"
 	"net/http"
 )
 
@@ -12,6 +14,33 @@ func (s *APIServer) HandlePostCreate(w http.ResponseWriter, r *http.Request) err
 	if err := json.NewDecoder(r.Body).Decode(&post); err != nil {
 		return err
 	}
+
+	sessionToken, err := getSessionToken(r)
+	if err != nil {
+		log.Println("getSessionToken error :", err)
+		return err
+	}
+
+	post.UserID, err = s.store.GetUserIdBySession(sessionToken)
+	if err != nil {
+		log.Println("store.GetUserIDBySession error :", err)
+		return err
+	}
+
+	if post.Content == "" && post.Image == "" {
+		err = errors.New("Post must have content or image")
+		log.Println("Post must have content or image")
+		return err
+	}
+
+	if post.Privacy == "" {
+		post.Privacy = "public"
+	}else if post.Privacy != "public" && post.Privacy != "private" && post.Privacy != "friends" {
+		err = errors.New("privacy must be public, private or friends")
+		log.Println("Privacy must be public, private or friends")
+		return err
+	}
+
 
 	id, err := s.store.CreatePost(post)
 	if err != nil {
@@ -25,6 +54,7 @@ func (s *APIServer) HandlePostCreate(w http.ResponseWriter, r *http.Request) err
 
 // GET /posts/{id}
 func (s *APIServer) HandlePostsGet(w http.ResponseWriter, r *http.Request) error {
+
 	return nil
 
 }
