@@ -35,6 +35,13 @@ type Storage interface {
 
 	// POSTS
 	CreatePost(Post) (id int64, err error)
+	GetPostByID(int64, int64) ([]Post, error)
+	IsPostOwner(int64, int64) (bool, error)
+	EditPost(Post) error
+	DeletePost(int64) error
+	CreateComment(Comment) (err error)
+	CreateLike(like) error
+	RemoveLikes(like) error
 }
 
 type SQLiteStore struct {

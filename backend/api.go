@@ -90,6 +90,8 @@ func (s *APIServer) Run() {
 	mux.HandleFunc("POST /posts/{id}/comments", makeHTTPHandleFunc(s.HandlePostComment))
 	// POST /posts/{id}/likes
 	mux.HandleFunc("POST /posts/{id}/likes", makeHTTPHandleFunc(s.HandlePostLike))
+	// DELETE /posts/{id}/likes
+	mux.HandleFunc("DELETE /posts/{id}/likes", makeHTTPHandleFunc(s.HandlePostUnlike))
 
 	// PROFILES HANDLERS
 	// GET /profiles/{id}

@@ -10,6 +10,7 @@ func main() {
 	if err := store.Init(); err != nil {
 		log.Fatal(err)
 	}
+	// test accounts and data for development uncomment to add
 	//store.AddTestAccount()
 	server := NewAPIServer(":3000", store)
 	server.Run()

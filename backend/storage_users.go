@@ -191,13 +191,13 @@ func (s *SQLiteStore) AddTestAccount() error {
 	users := []struct {
 		Email         string
 		Password      string
-		First_name    string
-		Last_name     string
-		Date_of_birth string
+		FirstName     string
+		LastName      string
+		DateOfBirth   string
 		Avatar        string
 		Nickname      string
-		About_me      string
-		Profile_type  string
+		AboutMe       string
+		ProfileType   string
 	}{
 		{"test1@example.com", "password123", "John", "Doe", "1990-01-01", "avatar1.png", "johndoe", "About John", "public"},
 		{"test2@example.com", "password123", "Jane", "Smith", "1992-05-10", "avatar2.png", "janesmith", "About Jane", "private"},
@@ -221,15 +221,16 @@ func (s *SQLiteStore) AddTestAccount() error {
 		ProfileType string
 	}
 
+	// Insert Users into DB
 	for _, user := range users {
 		hashedPassword, err := bcrypt.GenerateFromPassword([]byte(user.Password), bcrypt.DefaultCost)
 		if err != nil {
 			return err
 		}
 		query := `INSERT INTO users (email, password, first_name, last_name, date_of_birth, avatar, nickname, about_me, profile_type) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)`
-		res, err := s.db.Exec(query, user.Email, string(hashedPassword), user.First_name, user.Last_name, user.Date_of_birth, user.Avatar, user.Nickname, user.About_me, user.Profile_type)
+		res, err := s.db.Exec(query, user.Email, string(hashedPassword), user.FirstName, user.LastName, user.DateOfBirth, user.Avatar, user.Nickname, user.AboutMe, user.ProfileType)
 		if err != nil {
-			log.Print("s.db.Exec: ", err)
+			log.Print("s.db.Exec (users): ", err)
 			return err
 		}
 		userID, err := res.LastInsertId()
@@ -239,10 +240,10 @@ func (s *SQLiteStore) AddTestAccount() error {
 		userIDs = append(userIDs, struct {
 			ID          int64
 			ProfileType string
-		}{userID, user.Profile_type})
+		}{userID, user.ProfileType})
 	}
 
-	// Make all users follow each other with privacy logic
+	// Insert Followers (Privacy Aware)
 	for _, follower := range userIDs {
 		for _, followee := range userIDs {
 			if follower.ID != followee.ID { // Prevent self-following
@@ -260,9 +261,49 @@ func (s *SQLiteStore) AddTestAccount() error {
 		}
 	}
 
-	log.Print("Test accounts added and linked as followers")
+	// Insert Posts & Handle Privacy Settings
+	for _, user := range userIDs {
+		posts := []struct {
+			Content  string
+			Image    string
+			Privacy  string
+		}{
+			{"Public post content", "public_image.jpg", "public"},
+			{"Private post content", "private_image.jpg", "private"},
+		}
+
+		for _, post := range posts {
+			query := `INSERT INTO posts (user_id, content, image, privacy, created_at) VALUES (?, ?, ?, ?, datetime('now'))`
+			res, err := s.db.Exec(query, user.ID, post.Content, post.Image, post.Privacy)
+			if err != nil {
+				log.Print("s.db.Exec (posts): ", err)
+				return err
+			}
+			postID, err := res.LastInsertId()
+			if err != nil {
+				return err
+			}
+
+			// If post is private, assign specific viewers
+			if post.Privacy == "private" {
+				for _, viewer := range userIDs {
+					if viewer.ID != user.ID { // Exclude creator from restrictions
+						query := `INSERT INTO post_visibility (post_id, viewer_id) VALUES (?, ?)`
+						_, err := s.db.Exec(query, postID, viewer.ID)
+						if err != nil {
+							log.Print("s.db.Exec (post_visibility): ", err)
+							return err
+						}
+					}
+				}
+			}
+		}
+	}
+
+	log.Print("Test accounts, posts, and visibility settings added successfully!")
 	return nil
 }
+
 
 
 func (s *SQLiteStore) GetUserIdBySession(session string) (int64, error) {
