@@ -64,6 +64,10 @@ func (s *APIServer) Run() {
 	// GROUPS HANDLERS
 	// POST /groups
 	mux.HandleFunc("POST /groups", makeHTTPHandleFunc(s.HandleGroupCreate))
+	// GET /groups
+	mux.HandleFunc("GET /groups", makeHTTPHandleFunc(s.HandleGroupList))
+	// GET /groups/{id}
+	mux.HandleFunc("GET /groups/{id}", makeHTTPHandleFunc(s.HandleGroupGet))
 	// POST /groups/{id}/invite
 	mux.HandleFunc("POST /groups/{id}/invite", makeHTTPHandleFunc(s.HandleGroupInvite))
 	// GET /groups/search
@@ -74,8 +78,18 @@ func (s *APIServer) Run() {
 	mux.HandleFunc("GET /groups/{id}/requests", makeHTTPHandleFunc(s.HandleGroupListRequest))
 	// POST /groups/{id}/requests/{userId}/accept
 	mux.HandleFunc("POST /groups/{id}/requests/{userId}/accept", makeHTTPHandleFunc(s.HandleGroupRecAccept))
+	// POST /groups/{id}/requests/{userId}/reject
+	mux.HandleFunc("POST /groups/{id}/requests/{userId}/reject", makeHTTPHandleFunc(s.HandleGroupRecReject))
+	// GET /groups/{id}/members
+	mux.HandleFunc("GET /groups/{id}/members", makeHTTPHandleFunc(s.HandleGroupListMembers))
 	// POST /groups/{id}/events
 	mux.HandleFunc("POST /groups/{id}/events", makeHTTPHandleFunc(s.HandleGroupCreateEvent))
+	// GET /groups/{id}/events
+	mux.HandleFunc("GET /groups/{id}/events", makeHTTPHandleFunc(s.HandleGroupListEvents))
+	// POST /groups/{id}/events/{eventId}/response
+	mux.HandleFunc("POST /groups/{id}/events/{eventId}/response", makeHTTPHandleFunc(s.HandleEventResponse))
+	// GET /groups/{id}/chat
+	mux.HandleFunc("GET /groups/{id}/chat", makeHTTPHandleFunc(s.HandleGetGroupChatHistory))
 
 	// POSTS HANDLERS
 	// POST /posts
@@ -98,6 +112,21 @@ func (s *APIServer) Run() {
 	mux.HandleFunc("PUT /profiles/privacy", makeHTTPHandleFunc(s.HandleProfileSetPrivacy))
 	// GET /profiles/{id}/activity
 	mux.HandleFunc("GET /profiles/{id}/activity", makeHTTPHandleFunc(s.HandleProfileGetActivity))
+
+	// CHAT HANDLERS
+	// GET /chats
+	mux.HandleFunc("GET /chats", makeHTTPHandleFunc(s.HandleGetChats))
+	// GET /chats/{userId}
+	mux.HandleFunc("GET /chats/{userId}", makeHTTPHandleFunc(s.HandleGetChatHistory))
+	
+	// WebSocket handlers (these do not use makeHTTPHandleFunc)
+	// WebSocket /ws/chat/{userId}
+	mux.HandleFunc("/ws/chat/{userId}", s.HandleChatWebSocket)
+	// WebSocket /ws/groups/{id}/chat
+	mux.HandleFunc("/ws/groups/{id}/chat", s.HandleGroupChatWebSocket)
+
+	// Start the WebSocket hub in a goroutine
+	go hub.Run()
 
 	log.Println("Server running on port: ", s.listenAddr)
 	log.Fatal(http.ListenAndServe(s.listenAddr, mux))
