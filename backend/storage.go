@@ -42,6 +42,12 @@ type Storage interface {
 	CreateComment(Comment) (err error)
 	CreateLike(like) error
 	RemoveLikes(like) error
+	
+	// profile
+	GetProfileData(*Profile) (*Profile, error)
+	SetProfilePrivacy(Profile, string) error
+	isFollowing(int64, int64) (bool, error)
+
 }
 
 type SQLiteStore struct {

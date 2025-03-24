@@ -34,6 +34,7 @@ func (s *SQLiteStore) GetPostByID(userId int64, followerId int64) (posts []Post,
 	}
 	defer rows.Close()
 
+	
 	for rows.Next() {
 		var post Post
 		var profileType string

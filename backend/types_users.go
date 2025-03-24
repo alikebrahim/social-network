@@ -19,6 +19,10 @@ type UserAccount struct {
 	Nickname      string `json:"nickname"`
 	About_me      string `json:"about_me"`
 	Profile_type  string `json:"profile_type"`
+	FollowCount   int64 `json:"followCount"`
+	FollowingCount int64 `json:"followingCount"`
+	Followers []UserAccount `json:"followers"`
+	Following []UserAccount `json:"following"`
 }
 
 // func NewAccount(email, pass, fName, lName, dob, avatar, nic, abt, pType string) *UserAccount {
