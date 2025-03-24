@@ -1,17 +1,14 @@
 -- +goose Up
-CREATE TABLE notifications (
-<<<<<<< HEAD
+CREATE TABLE posts (
     id SERIAL PRIMARY KEY,
-=======
-    id INTEGER PRIMARY KEY AUTOINCREMENT,
->>>>>>> hussain-dev-2.0
     user_id INTEGER NOT NULL,
-    type TEXT NOT NULL,
     content TEXT NOT NULL,
-    is_read BOOLEAN DEFAULT FALSE,
+    image TEXT,
+    privacy TEXT NOT NULL DEFAULT 'public',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY (user_id) REFERENCES users (id)
 );
 
 -- +goose Down
-DROP TABLE notifications;
+DROP TABLE posts;

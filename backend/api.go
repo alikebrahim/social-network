@@ -21,7 +21,12 @@ type ApiError struct {
 func WriteJson(w http.ResponseWriter, status int, v any) error {
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(status)
-	return json.NewEncoder(w).Encode(v)
+	if err := json.NewEncoder(w).Encode(v); err != nil {
+		log.Println("json.NewEncoder error :", err)
+		return err
+	}
+	return nil
+	//return json.NewEncoder(w).Encode(v)
 }
 
 // server API
@@ -104,6 +109,8 @@ func (s *APIServer) Run() {
 	mux.HandleFunc("POST /posts/{id}/comments", makeHTTPHandleFunc(s.HandlePostComment))
 	// POST /posts/{id}/likes
 	mux.HandleFunc("POST /posts/{id}/likes", makeHTTPHandleFunc(s.HandlePostLike))
+	// DELETE /posts/{id}/likes
+	mux.HandleFunc("DELETE /posts/{id}/likes", makeHTTPHandleFunc(s.HandlePostUnlike))
 
 	// PROFILES HANDLERS
 	// GET /profiles/{id}

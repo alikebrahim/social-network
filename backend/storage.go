@@ -12,8 +12,23 @@ import (
 // goose -dir migrationsDir sqlite3 down
 
 type Storage interface {
+	// test data
+	AddTestAccount() error
 	// USER ACCOUNTS
 	CreateUserAccount(*UserAccount) (id int64, err error)
+	GetSeesionToken(int64) (string, error)
+	AuthenticateUser(string, string) (string, error)
+	DeleteSession(string) error
+	GetUserIdBySession(string) (int64, error)
+
+	// follow requests
+	CreateFollowRequest(follow) error
+	AcceptFollowRequest(int64, int64) error
+	DeleteFollowRequest(int64, int64) error
+	GetFollowRequests(int64) ([]UserAccount, error)
+	
+	
+
 	// DeleteUserAccount(int) error
 	// EditUserAccount(*UserAccount) error
 	// GetUserAccountByID(int) (*UserAccount, error)
@@ -21,6 +36,14 @@ type Storage interface {
 
 	// POSTS
 	CreatePost(*Post) (id int64, err error)
+	GetPostByID(int64, int64) ([]Post, error)
+	CreatePost(Post) (id int64, err error)
+	IsPostOwner(int64, int64) (bool, error)
+	EditPost(Post) error
+	DeletePost(int64) error
+	CreateComment(Comment) (err error)
+	CreateLike(like) error
+	RemoveLikes(like) error
 
 	// GROUPS
 	CreateGroup(userID int64, group *CreateGroupRequest) (int64, error)
@@ -61,6 +84,11 @@ type Storage interface {
 	// GROUP CHAT
 	SaveGroupChat(chat *GroupChat) (int64, error)
 	GetGroupChatHistory(groupID int64) ([]*GroupChat, error)
+	
+	// profile
+	GetProfileData(*Profile) (*Profile, error)
+	SetProfilePrivacy(Profile, string) error
+	isFollowing(int64, int64) (bool, error)
 }
 
 type SQLiteStore struct {

@@ -29,10 +29,14 @@ type LoginRequest struct {
 
 // Session represents a user session
 type Session struct {
-	ID        string `json:"id"`
-	UserID    int64  `json:"user_id"`
-	CreatedAt string `json:"created_at"`
-	ExpiresAt string `json:"expires_at"`
+	ID             string        `json:"id"`
+	UserID         int64         `json:"user_id"`
+	CreatedAt      string        `json:"created_at"`
+	ExpiresAt      string        `json:"expires_at"`
+	FollowCount    int64         `json:"followCount"`
+	FollowingCount int64         `json:"followingCount"`
+	Followers      []UserAccount `json:"followers"`
+	Following      []UserAccount `json:"following"`
 }
 
 // func NewAccount(email, pass, fName, lName, dob, avatar, nic, abt, pType string) *UserAccount {
