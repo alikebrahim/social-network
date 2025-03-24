@@ -33,7 +33,6 @@ type Storage interface {
 	// GetUserAccounts() ([]*UserAccount, error)
 
 	// POSTS
-	CreatePost(*Post) (id int64, err error)
 	GetPostByID(int64, int64) ([]Post, error)
 	CreatePost(Post) (id int64, err error)
 	IsPostOwner(int64, int64) (bool, error)

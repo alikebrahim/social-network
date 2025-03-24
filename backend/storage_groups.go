@@ -349,8 +349,8 @@ func (s *SQLiteStore) CreateGroupPost(groupID, userID int64, post *Post) (int64,
 
 	// Set post attributes
 	post.UserID = userID
-	post.GroupID = groupID
-	post.CreatedAt = time.Now()
+	// post.GroupID = groupID
+	post.CreatedAt = time.Now().String()
 
 	// Insert post
 	query := `INSERT INTO posts (user_id, group_id, content, image, created_at) 
@@ -359,7 +359,7 @@ func (s *SQLiteStore) CreateGroupPost(groupID, userID int64, post *Post) (int64,
 	result, err := s.db.Exec(
 		query,
 		post.UserID,
-		post.GroupID,
+		// post.GroupID,
 		post.Content,
 		post.Image,
 		post.CreatedAt,
@@ -395,7 +395,7 @@ func (s *SQLiteStore) GetGroupPosts(groupID int64) ([]*Post, error) {
 		err := rows.Scan(
 			&post.ID,
 			&post.UserID,
-			&post.GroupID,
+			// &post.GroupID,
 			&post.Content,
 			&post.Image,
 			&post.CreatedAt,
