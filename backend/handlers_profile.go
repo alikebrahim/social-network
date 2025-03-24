@@ -19,7 +19,7 @@ func (s *APIServer) HandleProfileGet(w http.ResponseWriter, r *http.Request) err
 		log.Println("strconv error :", err)
 		return err
 	}
-	// get how requsteing the profile 
+	// get how requsteing the profile
 	sessionToken, err := getSessionToken(r)
 	if err != nil {
 		log.Println("getSessionToken error :", err)
@@ -36,10 +36,9 @@ func (s *APIServer) HandleProfileGet(w http.ResponseWriter, r *http.Request) err
 		log.Println("store.isFollowing error :", err)
 		return err
 	}
-	
 
 	//log.Println("isFollowing:", isFollowing)
-	
+
 	// get profile data
 	_, err = s.store.GetProfileData(&profile)
 	if err != nil {
@@ -88,7 +87,6 @@ func (s *APIServer) HandleProfileSetPrivacy(w http.ResponseWriter, r *http.Reque
 		log.Println("Privacy is already set to", NewPrivacy)
 		return errors.New("Privacy is already set to " + NewPrivacy)
 	}
-
 
 	err = s.store.SetProfilePrivacy(profile, NewPrivacy)
 	if err != nil {

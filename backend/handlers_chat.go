@@ -100,7 +100,7 @@ func (s *APIServer) HandleChatWebSocket(w http.ResponseWriter, r *http.Request) 
 
 	// Get client ID from query parameters (for testing purposes)
 	clientID := r.URL.Query().Get("client_id")
-	
+
 	// Upgrade HTTP connection to WebSocket
 	conn, err := upgrader.Upgrade(w, r, nil)
 	if err != nil {
@@ -113,7 +113,7 @@ func (s *APIServer) HandleChatWebSocket(w http.ResponseWriter, r *http.Request) 
 		UserID:   senderID,
 		Conn:     conn,
 		Send:     make(chan []byte, 256), // Buffer up to 256 messages
-		ClientID: clientID,  // Store the client ID for test client
+		ClientID: clientID,               // Store the client ID for test client
 	}
 
 	// Register the client with the hub
@@ -121,14 +121,14 @@ func (s *APIServer) HandleChatWebSocket(w http.ResponseWriter, r *http.Request) 
 
 	// Record the user being connected for private chat
 	log.Printf("Chat WebSocket established between users %d and %d (client: %s)", senderID, receiverID, clientID)
-	
+
 	// Set up a handler for reading private chat messages
 	go func() {
 		defer func() {
 			hub.unregister <- client
 			conn.Close()
 		}()
-		
+
 		for {
 			// Read message from the WebSocket
 			var message ChatMessage
@@ -139,18 +139,18 @@ func (s *APIServer) HandleChatWebSocket(w http.ResponseWriter, r *http.Request) 
 				}
 				break
 			}
-			
+
 			// Ensure message has correct type
 			if message.Type != "private" {
 				log.Printf("Invalid message received: incorrect type")
 				continue
 			}
-			
+
 			// Set message metadata
 			message.SenderID = senderID
 			message.ReceiverID = receiverID
 			message.Timestamp = time.Now()
-			
+
 			// Save the message to the database
 			chat := &Chat{
 				SenderID:   senderID,
@@ -159,26 +159,26 @@ func (s *APIServer) HandleChatWebSocket(w http.ResponseWriter, r *http.Request) 
 				Image:      message.Image,
 				CreatedAt:  message.Timestamp,
 			}
-			
+
 			_, err = s.store.SaveChat(chat)
 			if err != nil {
 				log.Printf("Error saving private chat message: %v", err)
 				continue
 			}
-			
+
 			// Broadcast the message
 			wsMessage := WebSocketMessage{
 				Type:      "chat",
 				Payload:   message,
 				Client_ID: message.Client_ID, // Pass through the client ID for test client
 			}
-			
+
 			messageJSON, err := json.Marshal(wsMessage)
 			if err != nil {
 				log.Printf("Error marshaling message: %v", err)
 				continue
 			}
-			
+
 			hub.broadcast <- messageJSON
 		}
 	}()
@@ -229,12 +229,12 @@ func (s *APIServer) HandleGroupChatWebSocket(w http.ResponseWriter, r *http.Requ
 		UserID:   userID,
 		Conn:     conn,
 		Send:     make(chan []byte, 256), // Buffer up to 256 messages
-		ClientID: clientID,  // Store the client ID for test client
+		ClientID: clientID,               // Store the client ID for test client
 	}
 
 	// Register the client with the hub
 	hub.register <- client
-	
+
 	// Also register with the group
 	hub.RegisterGroupClient(groupID, client)
 
@@ -243,10 +243,10 @@ func (s *APIServer) HandleGroupChatWebSocket(w http.ResponseWriter, r *http.Requ
 	// Set up a handler for incoming messages
 	conn.SetCloseHandler(func(code int, text string) error {
 		log.Printf("WebSocket closed: %d %s", code, text)
-		
+
 		// Unregister the client
 		hub.unregister <- client
-		
+
 		// Call the default close handler
 		return nil
 	})
@@ -257,7 +257,7 @@ func (s *APIServer) HandleGroupChatWebSocket(w http.ResponseWriter, r *http.Requ
 			hub.unregister <- client
 			conn.Close()
 		}()
-		
+
 		for {
 			// Read message from the WebSocket
 			var message ChatMessage
@@ -287,7 +287,7 @@ func (s *APIServer) HandleGroupChatWebSocket(w http.ResponseWriter, r *http.Requ
 				Image:     message.Image,
 				CreatedAt: message.Timestamp,
 			}
-			
+
 			_, err = s.store.SaveGroupChat(groupChat)
 			if err != nil {
 				log.Printf("Error saving group chat message: %v", err)
@@ -300,13 +300,13 @@ func (s *APIServer) HandleGroupChatWebSocket(w http.ResponseWriter, r *http.Requ
 				Payload:   message,
 				Client_ID: message.Client_ID, // Pass through the client ID for test client
 			}
-			
+
 			messageJSON, err := json.Marshal(wsMessage)
 			if err != nil {
 				log.Printf("Error marshaling message: %v", err)
 				continue
 			}
-			
+
 			hub.broadcast <- messageJSON
 		}
 	}()
@@ -325,13 +325,13 @@ func (s *APIServer) handlePrivateChatMessage(senderID, receiverID int64, content
 		Image:      image,
 		CreatedAt:  time.Now(),
 	}
-	
+
 	// Save to database
 	_, err := s.store.SaveChat(chat)
 	if err != nil {
 		return err
 	}
-	
+
 	// Create WebSocket message
 	message := ChatMessage{
 		Type:       "private",
@@ -341,18 +341,18 @@ func (s *APIServer) handlePrivateChatMessage(senderID, receiverID int64, content
 		Image:      image,
 		Timestamp:  chat.CreatedAt,
 	}
-	
+
 	// Broadcast
 	wsMessage := WebSocketMessage{
 		Type:    "chat",
 		Payload: message,
 	}
-	
+
 	messageJSON, err := json.Marshal(wsMessage)
 	if err != nil {
 		return err
 	}
-	
+
 	hub.broadcast <- messageJSON
 	return nil
 }

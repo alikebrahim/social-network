@@ -125,7 +125,7 @@ func (s *APIServer) Run() {
 	mux.HandleFunc("GET /chats", makeHTTPHandleFunc(s.HandleGetChats))
 	// GET /chats/{userId}
 	mux.HandleFunc("GET /chats/{userId}", makeHTTPHandleFunc(s.HandleGetChatHistory))
-	
+
 	// WebSocket handlers (these do not use makeHTTPHandleFunc)
 	// WebSocket /ws/chat/{userId}
 	mux.HandleFunc("/ws/chat/{userId}", s.HandleChatWebSocket)

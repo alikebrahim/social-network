@@ -112,13 +112,13 @@ func (s *SQLiteStore) GetFollowRequests(userId int64) ([]UserAccount, error) {
 	return followRequests, nil
 }
 
-func (s *SQLiteStore) isFollowing(requesterId int64,userId int64) (bool, error) {
+func (s *SQLiteStore) isFollowing(requesterId int64, userId int64) (bool, error) {
 	var count int
 	err := s.db.QueryRow(
-		"SELECT COUNT(*) FROM followers WHERE follower_id = ? AND followed_id = ? AND status = 'accepted'", 
+		"SELECT COUNT(*) FROM followers WHERE follower_id = ? AND followed_id = ? AND status = 'accepted'",
 		requesterId, userId,
 	).Scan(&count)
-		if err != nil {
+	if err != nil {
 		log.Print("s.db.QueryRow: ", err)
 		return false, err
 	}

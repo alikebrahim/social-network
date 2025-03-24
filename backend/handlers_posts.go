@@ -106,7 +106,6 @@ func (s *APIServer) HandlePostEdit(w http.ResponseWriter, r *http.Request) error
 		return err
 	}
 
-	
 	post.UserID, err = s.store.GetUserIdBySession(session)
 	if err != nil {
 		log.Println("store.GetUserIdBySession error :", err)
@@ -235,7 +234,7 @@ func (s *APIServer) HandlePostLike(w http.ResponseWriter, r *http.Request) error
 		log.Println("store.GetUserIDBySession error :", err)
 		return err
 	}
-	
+
 	err = s.store.CreateLike(like)
 	if err != nil {
 		log.Println("store.CreateLike error :", err)
@@ -276,6 +275,6 @@ func (s *APIServer) HandlePostUnlike(w http.ResponseWriter, r *http.Request) err
 		log.Println("store.CreateLike error :", err)
 		return err
 	}
-	
+
 	return nil
 }

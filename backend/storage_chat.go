@@ -8,7 +8,7 @@ import (
 func (s *SQLiteStore) SaveChat(chat *Chat) (int64, error) {
 	query := `INSERT INTO chats (sender_id, receiver_id, content, image, created_at) 
               VALUES (?, ?, ?, ?, ?)`
-	
+
 	result, err := s.db.Exec(
 		query,
 		chat.SenderID,
@@ -20,12 +20,12 @@ func (s *SQLiteStore) SaveChat(chat *Chat) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	
+
 	chatID, err := result.LastInsertId()
 	if err != nil {
 		return 0, err
 	}
-	
+
 	return chatID, nil
 }
 
@@ -51,13 +51,13 @@ func (s *SQLiteStore) GetUserChats(userID int64) ([]*Chat, error) {
         WHERE rn = 1
         ORDER BY created_at DESC
     `
-	
+
 	rows, err := s.db.Query(query, userID, userID, userID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var chats []*Chat
 	for rows.Next() {
 		var chat Chat
@@ -74,7 +74,7 @@ func (s *SQLiteStore) GetUserChats(userID int64) ([]*Chat, error) {
 		}
 		chats = append(chats, &chat)
 	}
-	
+
 	return chats, nil
 }
 
@@ -84,13 +84,13 @@ func (s *SQLiteStore) GetChatHistory(userID1, userID2 int64) ([]*Chat, error) {
               FROM chats 
               WHERE (sender_id = ? AND receiver_id = ?) OR (sender_id = ? AND receiver_id = ?) 
               ORDER BY created_at ASC`
-	
+
 	rows, err := s.db.Query(query, userID1, userID2, userID2, userID1)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var chats []*Chat
 	for rows.Next() {
 		var chat Chat
@@ -107,7 +107,7 @@ func (s *SQLiteStore) GetChatHistory(userID1, userID2 int64) ([]*Chat, error) {
 		}
 		chats = append(chats, &chat)
 	}
-	
+
 	return chats, nil
 }
 
@@ -121,10 +121,10 @@ func (s *SQLiteStore) SaveGroupChat(chat *GroupChat) (int64, error) {
 	if !isMember {
 		return 0, ErrUnauthorized
 	}
-	
+
 	query := `INSERT INTO group_chats (group_id, sender_id, content, image, created_at) 
               VALUES (?, ?, ?, ?, ?)`
-	
+
 	result, err := s.db.Exec(
 		query,
 		chat.GroupID,
@@ -136,12 +136,12 @@ func (s *SQLiteStore) SaveGroupChat(chat *GroupChat) (int64, error) {
 	if err != nil {
 		return 0, err
 	}
-	
+
 	chatID, err := result.LastInsertId()
 	if err != nil {
 		return 0, err
 	}
-	
+
 	return chatID, nil
 }
 
@@ -151,13 +151,13 @@ func (s *SQLiteStore) GetGroupChatHistory(groupID int64) ([]*GroupChat, error) {
               FROM group_chats 
               WHERE group_id = ? 
               ORDER BY created_at ASC`
-	
+
 	rows, err := s.db.Query(query, groupID)
 	if err != nil {
 		return nil, err
 	}
 	defer rows.Close()
-	
+
 	var chats []*GroupChat
 	for rows.Next() {
 		var chat GroupChat
@@ -174,6 +174,6 @@ func (s *SQLiteStore) GetGroupChatHistory(groupID int64) ([]*GroupChat, error) {
 		}
 		chats = append(chats, &chat)
 	}
-	
+
 	return chats, nil
 }

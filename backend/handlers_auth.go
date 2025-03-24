@@ -38,7 +38,6 @@ func (s *APIServer) HandleRegister(w http.ResponseWriter, r *http.Request) error
 		Secure:   true,
 	})
 
-
 	WriteJson(w, http.StatusCreated, id)
 	return nil
 }
@@ -69,7 +68,7 @@ func (s *APIServer) HandleLogin(w http.ResponseWriter, r *http.Request) error {
 
 // POST /auth/logout
 func (s *APIServer) HandleLogout(w http.ResponseWriter, r *http.Request) error {
-	cookie, err  := r.Cookie("session_token")
+	cookie, err := r.Cookie("session_token")
 	if err != nil {
 		log.Print("r.Cookies: ", err)
 		return err
@@ -108,4 +107,3 @@ func getSessionToken(r *http.Request) (string, error) {
 	log.Print("cookie: ", cookie)
 	return cookie.Value, nil
 }
-

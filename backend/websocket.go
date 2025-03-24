@@ -53,7 +53,7 @@ type Hub struct {
 
 	// Group chat tracking - maps group ID to set of user IDs
 	groupClients map[int64]map[int64]*WebSocketClient
-	
+
 	// Client mapping by client ID (for test client)
 	clientIDMap map[string]*WebSocketClient
 }
@@ -75,14 +75,14 @@ func (h *Hub) Run() {
 		case client := <-h.register:
 			h.mutex.Lock()
 			h.clients[client.UserID] = client
-			
+
 			// Add to client ID mapping if available
 			if client.ClientID != "" {
 				h.clientIDMap[client.ClientID] = client
-				log.Printf("Registered client with ID: %s (total clients: %d)", 
+				log.Printf("Registered client with ID: %s (total clients: %d)",
 					client.ClientID, len(h.clientIDMap))
 			}
-			
+
 			h.mutex.Unlock()
 
 		case client := <-h.unregister:
@@ -90,13 +90,13 @@ func (h *Hub) Run() {
 			if _, ok := h.clients[client.UserID]; ok {
 				delete(h.clients, client.UserID)
 				close(client.Send)
-				
+
 				// Remove from client ID mapping
 				if client.ClientID != "" {
 					delete(h.clientIDMap, client.ClientID)
 					log.Printf("Unregistered client with ID: %s", client.ClientID)
 				}
-				
+
 				// Remove from group chats
 				for groupID, users := range h.groupClients {
 					if _, ok := users[client.UserID]; ok {
@@ -121,7 +121,7 @@ func (h *Hub) Run() {
 				log.Printf("Error re-marshaling payload: %v", err)
 				continue
 			}
-			
+
 			if err := json.Unmarshal(payloadBytes, &chatMsg); err != nil {
 				log.Printf("Error unmarshaling chat message: %v", err)
 				continue
@@ -132,22 +132,22 @@ func (h *Hub) Run() {
 			// For test client, we need special handling
 			if wsMsg.Client_ID != "" {
 				log.Printf("Broadcasting message from client %s", wsMsg.Client_ID)
-				
+
 				// Get all registered client IDs for debugging
 				var clientIDs []string
 				for id := range h.clientIDMap {
 					clientIDs = append(clientIDs, id)
 				}
 				log.Printf("All registered client IDs: %v", clientIDs)
-				
+
 				// Find the sender and recipient
 				senderClient, senderExists := h.clientIDMap[wsMsg.Client_ID]
-				
+
 				// Send to all clients EXCEPT the sender
 				for id, client := range h.clientIDMap {
 					if id != wsMsg.Client_ID && client != nil && client.Conn != nil {
 						log.Printf("Attempting to send message to client %s", id)
-						
+
 						select {
 						case client.Send <- message:
 							log.Printf("Successfully sent message to client %s", id)
@@ -159,7 +159,7 @@ func (h *Hub) Run() {
 						}
 					}
 				}
-				
+
 				// Always echo back to sender for UI update
 				if senderExists && senderClient != nil {
 					select {
@@ -184,7 +184,7 @@ func (h *Hub) Run() {
 							delete(h.clients, client.UserID)
 						}
 					}
-					
+
 					// Also send to sender for their own display
 					if client, ok := h.clients[chatMsg.SenderID]; ok {
 						select {
@@ -209,7 +209,7 @@ func (h *Hub) Run() {
 					}
 				}
 			}
-			
+
 			h.mutex.Unlock()
 		}
 	}
@@ -219,11 +219,11 @@ func (h *Hub) Run() {
 func (h *Hub) RegisterGroupClient(groupID int64, client *WebSocketClient) {
 	h.mutex.Lock()
 	defer h.mutex.Unlock()
-	
+
 	if _, ok := h.groupClients[groupID]; !ok {
 		h.groupClients[groupID] = make(map[int64]*WebSocketClient)
 	}
-	
+
 	h.groupClients[groupID][client.UserID] = client
 }
 
@@ -233,13 +233,13 @@ func createMessage(messageType string, payload interface{}) []byte {
 		Type:    messageType,
 		Payload: payload,
 	}
-	
+
 	data, err := json.Marshal(message)
 	if err != nil {
 		log.Printf("Error marshaling WebSocket message: %v", err)
 		return nil
 	}
-	
+
 	return data
 }
 
@@ -247,7 +247,7 @@ func createMessage(messageType string, payload interface{}) []byte {
 func (c *WebSocketClient) Start() {
 	// Start the write pump in a goroutine
 	go c.writePump()
-	
+
 	// Start the read pump in the current goroutine
 	c.readPump()
 }
@@ -264,7 +264,7 @@ func (c *WebSocketClient) writePump() {
 		ticker.Stop()
 		c.Conn.Close()
 	}()
-	
+
 	for {
 		select {
 		case message, ok := <-c.Send:
@@ -274,14 +274,14 @@ func (c *WebSocketClient) writePump() {
 				c.Conn.WriteMessage(websocket.CloseMessage, []byte{})
 				return
 			}
-			
+
 			// Write a single message at a time instead of batching
 			// This ensures each message is a complete JSON object
 			if err := c.Conn.WriteMessage(websocket.TextMessage, message); err != nil {
 				log.Printf("Error writing to client %s: %v", c.ClientID, err)
 				return
 			}
-			
+
 			// Process any queued messages individually
 			n := len(c.Send)
 			for i := 0; i < n; i++ {
@@ -306,14 +306,14 @@ func (c *WebSocketClient) readPump() {
 		hub.unregister <- c
 		c.Conn.Close()
 	}()
-	
+
 	c.Conn.SetReadLimit(512 * 1024) // 512KB max message size
 	c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
-	c.Conn.SetPongHandler(func(string) error { 
+	c.Conn.SetPongHandler(func(string) error {
 		c.Conn.SetReadDeadline(time.Now().Add(60 * time.Second))
-		return nil 
+		return nil
 	})
-	
+
 	for {
 		_, message, err := c.Conn.ReadMessage()
 		if err != nil {
@@ -322,7 +322,7 @@ func (c *WebSocketClient) readPump() {
 			}
 			break
 		}
-		
+
 		// Try to preserve client ID for message routing
 		var wsMsg WebSocketMessage
 		if err := json.Unmarshal(message, &wsMsg); err == nil && wsMsg.Client_ID == "" {
@@ -334,7 +334,7 @@ func (c *WebSocketClient) readPump() {
 				}
 			}
 		}
-		
+
 		// Process the received message
 		hub.broadcast <- message
 	}

@@ -43,15 +43,15 @@ type EventResponse struct {
 
 // GroupInvite represents an invitation to join a group
 type GroupInvite struct {
-	GroupID    int64  `json:"group_id"`
-	InviterID  int64  `json:"inviter_id"`
-	InviteeID  int64  `json:"invitee_id"`
+	GroupID   int64 `json:"group_id"`
+	InviterID int64 `json:"inviter_id"`
+	InviteeID int64 `json:"invitee_id"`
 }
 
 // GroupRequest represents a request to join a group
 type GroupRequest struct {
-	GroupID    int64  `json:"group_id"`
-	RequesterID int64  `json:"requester_id"`
+	GroupID     int64 `json:"group_id"`
+	RequesterID int64 `json:"requester_id"`
 }
 
 // CreateGroupRequest is used when creating a new group

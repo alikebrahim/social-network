@@ -72,7 +72,7 @@ func (s *APIServer) HandleFollowingRequests(w http.ResponseWriter, r *http.Reque
 		log.Println("WriteJson error :", err)
 		return err
 	}
-	
+
 	return nil
 }
 
@@ -98,18 +98,16 @@ func (s *APIServer) HandleFollowingAccept(w http.ResponseWriter, r *http.Request
 		return err
 	}
 
-
 	if follow.FollowerID == follow.FollowedID {
 		log.Println("You can't follow yourself")
 		return errors.New("you can't follow yourself")
 	}
 
-	err = s.store.AcceptFollowRequest(follow.FollowedID , follow.FollowerID)
+	err = s.store.AcceptFollowRequest(follow.FollowedID, follow.FollowerID)
 	if err != nil {
 		log.Println("store.AcceptFollowRequest error :", err)
 		return err
 	}
-
 
 	return nil
 

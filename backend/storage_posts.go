@@ -34,7 +34,6 @@ func (s *SQLiteStore) GetPostByID(userId int64, followerId int64) (posts []Post,
 	}
 	defer rows.Close()
 
-	
 	for rows.Next() {
 		var post Post
 		var profileType string
@@ -70,8 +69,6 @@ func (s *SQLiteStore) GetPostByID(userId int64, followerId int64) (posts []Post,
 				continue
 			}
 		}
-
-	
 
 		log.Println(post)
 
@@ -127,7 +124,6 @@ func (s *SQLiteStore) CreateComment(comment Comment) (err error) {
 	}
 	return nil
 }
-
 
 func (s *SQLiteStore) CreateLike(like like) (err error) {
 	var exists bool

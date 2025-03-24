@@ -12,7 +12,6 @@ func (s *SQLiteStore) GetProfileData(Profile *Profile) (*Profile, error) {
 	// 	return nil, err
 	// }
 
-	
 	// queryPosts := "SELECT id, user_id, content, image, created_at FROM posts WHERE user_id = ?"
 	// rows, err := s.db.Query(queryPosts, Profile.UserData.ID)
 	// if err != nil {
@@ -48,8 +47,8 @@ func (s *SQLiteStore) GetProfileData(Profile *Profile) (*Profile, error) {
 	// 	return nil, err
 	// }
 
-	// queryFollowersData := `SELECT id, follower_id, followed_id, status, created_at 
-	//           FROM followers 
+	// queryFollowersData := `SELECT id, follower_id, followed_id, status, created_at
+	//           FROM followers
 	//           WHERE followed_id = ? AND status = 'accepted'`
 	// rows, err = s.db.Query(queryFollowersData, Profile.UserData.ID)
 	// if err != nil {
@@ -68,8 +67,8 @@ func (s *SQLiteStore) GetProfileData(Profile *Profile) (*Profile, error) {
 	// }
 
 	// queryFollowingData := `
-	// 	SELECT u.id, u.email, u.password, u.first_name, u.last_name, u.date_of_birth, 
-	// 	       u.avatar, u.nickname, u.about_me, u.profile_type 
+	// 	SELECT u.id, u.email, u.password, u.first_name, u.last_name, u.date_of_birth,
+	// 	       u.avatar, u.nickname, u.about_me, u.profile_type
 	// 	FROM followers f
 	// 	JOIN users u ON f.followed_id = u.id
 	// 	WHERE f.follower_id = ? AND f.status = 'accepted'
@@ -89,7 +88,7 @@ func (s *SQLiteStore) GetProfileData(Profile *Profile) (*Profile, error) {
 	// 	}
 	// 	Profile.UserData.Following = append(Profile.UserData.Following, follow)
 	// }
-	err := s.db.QueryRow("SELECT id, email, first_name, last_name, bio, avatar, nickname, profile_type FROM users WHERE id = ?" , Profile.UserData.ID).Scan(&Profile.UserData.ID, &Profile.UserData.Email, &Profile.UserData.First_name, &Profile.UserData.Last_name, &Profile.UserData.About_me, &Profile.UserData.Avatar, &Profile.UserData.Nickname, &Profile.UserData.Profile_type)
+	err := s.db.QueryRow("SELECT id, email, first_name, last_name, bio, avatar, nickname, profile_type FROM users WHERE id = ?", Profile.UserData.ID).Scan(&Profile.UserData.ID, &Profile.UserData.Email, &Profile.UserData.First_name, &Profile.UserData.Last_name, &Profile.UserData.About_me, &Profile.UserData.Avatar, &Profile.UserData.Nickname, &Profile.UserData.Profile_type)
 	if err != nil {
 		log.Println("Error getting profile data:", err)
 		return nil, err
@@ -103,7 +102,7 @@ func (s *SQLiteStore) GetProfileData(Profile *Profile) (*Profile, error) {
 	defer postsRows.Close()
 	for postsRows.Next() {
 		var post Post
-		err := postsRows.Scan(&post.ID, &post.UserID, &post.Content, &post.Image , &post.Privacy, &post.CreatedAt)
+		err := postsRows.Scan(&post.ID, &post.UserID, &post.Content, &post.Image, &post.Privacy, &post.CreatedAt)
 		if err != nil {
 			log.Println("Error scanning posts:", err)
 			return nil, err

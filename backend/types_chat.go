@@ -31,7 +31,7 @@ type ChatMessage struct {
 	Content    string    `json:"content"`
 	Image      string    `json:"image,omitempty"`
 	Timestamp  time.Time `json:"timestamp"`
-	Client_ID  string    `json:"client_id,omitempty"`   // Used for test client to track message origin
+	Client_ID  string    `json:"client_id,omitempty"` // Used for test client to track message origin
 }
 
 // WebSocketConnection represents a connected websocket client

@@ -190,15 +190,15 @@ func (s *SQLiteStore) DeleteSession(sessionToken string) error {
 
 func (s *SQLiteStore) AddTestAccount() error {
 	users := []struct {
-		Email         string
-		Password      string
-		FirstName     string
-		LastName      string
-		DateOfBirth   string
-		Avatar        string
-		Nickname      string
-		AboutMe       string
-		ProfileType   string
+		Email       string
+		Password    string
+		FirstName   string
+		LastName    string
+		DateOfBirth string
+		Avatar      string
+		Nickname    string
+		AboutMe     string
+		ProfileType string
 	}{
 		{"test1@example.com", "password123", "John", "Doe", "1990-01-01", "avatar1.png", "johndoe", "About John", "public"},
 		{"test2@example.com", "password123", "Jane", "Smith", "1992-05-10", "avatar2.png", "janesmith", "About Jane", "private"},
@@ -265,9 +265,9 @@ func (s *SQLiteStore) AddTestAccount() error {
 	// Insert Posts & Handle Privacy Settings
 	for _, user := range userIDs {
 		posts := []struct {
-			Content  string
-			Image    string
-			Privacy  string
+			Content string
+			Image   string
+			Privacy string
 		}{
 			{"Public post content", "public_image.jpg", "public"},
 			{"Private post content", "private_image.jpg", "private"},
@@ -304,8 +304,6 @@ func (s *SQLiteStore) AddTestAccount() error {
 	log.Print("Test accounts, posts, and visibility settings added successfully!")
 	return nil
 }
-
-
 
 func (s *SQLiteStore) GetUserIdBySession(session string) (int64, error) {
 	log.Print("session: ", session)
