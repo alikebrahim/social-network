@@ -1,6 +1,6 @@
 -- +goose Up
 CREATE TABLE events (
-    id SERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     group_id INTEGER NOT NULL,
     creator_id INTEGER NOT NULL,
     title TEXT NOT NULL,

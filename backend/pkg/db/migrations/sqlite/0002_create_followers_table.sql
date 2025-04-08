@@ -1,6 +1,6 @@
 -- +goose Up
 CREATE TABLE followers (
-    id SERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     follower_id INTEGER NOT NULL,
     followed_id INTEGER NOT NULL,
     status TEXT NOT NULL DEFAULT 'pending',

@@ -1,6 +1,6 @@
 -- +goose Up
 CREATE TABLE group_chats (
-    id SERIAL PRIMARY KEY,
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
     group_id INTEGER NOT NULL,
     sender_id INTEGER NOT NULL,
     content TEXT,

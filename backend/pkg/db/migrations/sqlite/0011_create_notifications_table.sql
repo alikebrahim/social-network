@@ -1,10 +1,6 @@
 -- +goose Up
 CREATE TABLE notifications (
-<<<<<<< HEAD
-    id SERIAL PRIMARY KEY,
-=======
     id INTEGER PRIMARY KEY AUTOINCREMENT,
->>>>>>> hussain-dev-2.0
     user_id INTEGER NOT NULL,
     type TEXT NOT NULL,
     content TEXT NOT NULL,
