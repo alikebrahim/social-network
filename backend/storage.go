@@ -41,6 +41,7 @@ type Storage interface {
 	CreateComment(Comment) (err error)
 	CreateLike(like) error
 	RemoveLikes(like) error
+	CanUserSeePost(int64, int64) (bool, error)
 
 	// GROUPS
 	CreateGroup(userID int64, group *CreateGroupRequest) (int64, error)

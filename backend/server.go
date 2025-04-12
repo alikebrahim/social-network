@@ -11,7 +11,7 @@ func main() {
 		log.Fatal(err)
 	}
 	// test accounts and data for development uncomment to add
-	//store.AddTestAccount()
+	store.AddTestAccount()
 	server := NewAPIServer(":3000", store)
 	server.Run()
 }

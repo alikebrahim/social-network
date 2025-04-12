@@ -1,6 +1,7 @@
 package main
 
 import (
+	"database/sql"
 	"errors"
 	"log"
 )
@@ -158,4 +159,30 @@ func (s *SQLiteStore) RemoveLikes(like like) (err error) {
 		return err
 	}
 	return nil
+}
+
+func (s *SQLiteStore) CanUserSeePost(postID int64, viewerID int64) (bool, error) {
+	var foundPostID int
+    err := s.db.QueryRow(`
+        SELECT p.id
+        FROM posts p
+        LEFT JOIN post_visibility pv 
+            ON p.id = pv.post_id 
+            AND pv.viewer_id = ?
+        WHERE p.id = ?
+          AND (
+                p.privacy = 'public'
+             OR pv.post_id IS NOT NULL
+          );
+    `, viewerID, postID).Scan(&foundPostID)
+
+
+    if err == sql.ErrNoRows {
+        return false, nil
+    }
+    if err != nil {
+        return false, err
+    }
+    return true, nil
+
 }
