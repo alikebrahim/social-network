@@ -1,11 +1,13 @@
 package sqlite
 
 import (
+	"fmt"
 	"log"
 	"time"
 
 	"socialNetwork/pkg/domain/auth"
 	"socialNetwork/pkg/domain/following"
+	"socialNetwork/pkg/domain/notifications"
 	"socialNetwork/pkg/errors"
 )
 
@@ -52,6 +54,34 @@ func (s *SQLiteStore) CreateFollowRequest(req following.FollowRequest) error {
 		return errors.ErrInternalServer
 	}
 
+	// If profile is private, create a notification for the follow request
+	if status == "pending" {
+		// Get follower name for notification content
+		var firstName, lastName string
+		userQuery := `SELECT first_name, last_name FROM users WHERE id = ?`
+		err = s.db.QueryRow(userQuery, req.FollowerID).Scan(&firstName, &lastName)
+		if err != nil {
+			log.Print("Error getting follower name:", err)
+			// Continue even if notification creation fails
+		} else {
+			// Create notification
+			notification := &notifications.Notification{
+				UserID:    req.FollowedID,
+				Type:      notifications.TypeFollowRequest,
+				Content:   fmt.Sprintf("%s %s wants to follow you", firstName, lastName),
+				RelatedID: req.FollowerID,
+				SenderID:  req.FollowerID,
+				CreatedAt: time.Now(),
+			}
+			
+			err = s.CreateNotification(notification)
+			if err != nil {
+				log.Print("Error creating follow request notification:", err)
+				// Continue even if notification creation fails
+			}
+		}
+	}
+
 	return nil
 }
 
@@ -79,6 +109,32 @@ func (s *SQLiteStore) AcceptFollowRequest(followerID, followedID int64) error {
 	if err != nil {
 		log.Print("Error accepting follow request:", err)
 		return errors.ErrInternalServer
+	}
+
+	// Create notification for accepted follow request
+	// Get followed user name for notification content
+	var firstName, lastName string
+	userQuery := `SELECT first_name, last_name FROM users WHERE id = ?`
+	err = s.db.QueryRow(userQuery, followedID).Scan(&firstName, &lastName)
+	if err != nil {
+		log.Print("Error getting user name:", err)
+		// Continue even if notification creation fails
+	} else {
+		// Create notification
+		notification := &notifications.Notification{
+			UserID:    followerID,
+			Type:      "follow_accepted",
+			Content:   fmt.Sprintf("%s %s accepted your follow request", firstName, lastName),
+			RelatedID: followedID,
+			SenderID:  followedID,
+			CreatedAt: time.Now(),
+		}
+		
+		err = s.CreateNotification(notification)
+		if err != nil {
+			log.Print("Error creating follow acceptance notification:", err)
+			// Continue even if notification creation fails
+		}
 	}
 
 	return nil
@@ -154,4 +210,19 @@ func (s *SQLiteStore) GetFollowRequests(userID int64) ([]auth.UserAccount, error
 	}
 
 	return usersList, nil
+}
+
+// IsFollowing checks if a user is following another user
+func (s *SQLiteStore) IsFollowing(followerID, followedID int64) (bool, error) {
+	query := `SELECT COUNT(*) FROM followers 
+              WHERE follower_id = ? AND followed_id = ? AND status = 'accepted'`
+
+	var count int
+	err := s.db.QueryRow(query, followerID, followedID).Scan(&count)
+	if err != nil {
+		log.Print("Error checking follow status:", err)
+		return false, errors.ErrInternalServer
+	}
+
+	return count > 0, nil
 }

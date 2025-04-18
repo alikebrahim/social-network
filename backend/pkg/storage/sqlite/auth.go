@@ -5,6 +5,7 @@ import (
 	"log"
 	"time"
 
+	"github.com/google/uuid"
 	"golang.org/x/crypto/bcrypt"
 	"socialNetwork/pkg/domain/auth"
 	"socialNetwork/pkg/errors"
@@ -136,8 +137,8 @@ func (s *SQLiteStore) GetUserIdBySession(sessionToken string) (int64, error) {
 	return userID, nil
 }
 
-// Helper function to generate a random session token
+// Helper function to generate a random session token using UUID
 func generateSessionToken() string {
-	// In a real implementation, use a secure random generator
-	return time.Now().Format(time.RFC3339Nano)
+	// Generate a secure random UUID for session tokens
+	return uuid.New().String()
 }

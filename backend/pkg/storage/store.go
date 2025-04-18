@@ -5,6 +5,7 @@ import (
 	"socialNetwork/pkg/domain/chat"
 	"socialNetwork/pkg/domain/following"
 	"socialNetwork/pkg/domain/groups"
+	"socialNetwork/pkg/domain/notifications"
 	"socialNetwork/pkg/domain/posts"
 	"socialNetwork/pkg/domain/profile"
 )
@@ -80,4 +81,11 @@ type Storage interface {
 	// Profile operations
 	GetProfileData(*profile.Profile) (*profile.Profile, error)
 	SetProfilePrivacy(profile.Profile, string) error
+	
+	// Notification operations
+	CreateNotification(*notifications.Notification) error
+	GetNotifications(userID int64, limit, offset int) (notifications.NotificationsList, error)
+	MarkNotificationAsRead(notificationID, userID int64) error
+	MarkAllNotificationsAsRead(userID int64) error
+	GetUnreadNotificationCount(userID int64) (int, error)
 }
