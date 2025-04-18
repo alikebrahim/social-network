@@ -1,3 +1,4 @@
+- Improve on error package
 - Remove all references to claude from git history
 - Create a comprehensive test script that will simulate user interactions.
 - Ensure migration files are consolidated by table

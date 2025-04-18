@@ -2,6 +2,7 @@ package utils
 
 import (
 	"encoding/json"
+	"errors"
 	"log"
 	"net/http"
 )
@@ -29,4 +30,27 @@ func MakeHTTPHandleFunc(f func(http.ResponseWriter, *http.Request) error) http.H
 			WriteJson(w, http.StatusBadRequest, ApiError{Error: err.Error()})
 		}
 	}
+}
+
+// GetUserIDFromContext retrieves the user ID from the request context
+func GetUserIDFromContext(r *http.Request) (int64, error) {
+	userID, ok := r.Context().Value("user_id").(int64)
+	if !ok {
+		return 0, errors.New("user ID not found in context")
+	}
+	return userID, nil
+}
+
+// GetParam retrieves a URL parameter from the request
+func GetParam(r *http.Request, key string) string {
+	// Try to get path parameters from the request context
+	params, ok := r.Context().Value("params").(map[string]string)
+	if ok {
+		if value, exists := params[key]; exists {
+			return value
+		}
+	}
+	
+	// Try to get from path value (for Go 1.22+ compatibility)
+	return r.PathValue(key)
 }

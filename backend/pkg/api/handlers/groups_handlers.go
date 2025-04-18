@@ -8,6 +8,7 @@ import (
 
 	"socialNetwork/pkg/api/utils"
 	"socialNetwork/pkg/domain/groups"
+	"socialNetwork/pkg/domain/posts"
 	"socialNetwork/pkg/errors"
 	"socialNetwork/pkg/logger"
 	"socialNetwork/pkg/storage"

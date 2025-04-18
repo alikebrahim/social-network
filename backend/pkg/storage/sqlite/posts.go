@@ -524,4 +524,3 @@ func (s *SQLiteStore) CanUserSeePost(userID, postID int64) (bool, error) {
 		return false, nil
 	}
 }
-}
