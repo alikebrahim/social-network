@@ -2,10 +2,12 @@ package sqlite
 
 import (
 	"database/sql"
+	"fmt"
 	"log"
 	"time"
 
 	"socialNetwork/pkg/domain/groups"
+	"socialNetwork/pkg/domain/notifications"
 	"socialNetwork/pkg/domain/posts"
 	"socialNetwork/pkg/errors"
 )
@@ -236,6 +238,39 @@ func (s *SQLiteStore) InviteToGroup(groupID, inviterID, inviteeID int64) error {
 		log.Print("Error creating group invitation:", err)
 		return errors.ErrInternalServer
 	}
+	
+	// Create a notification for the invitee
+	// Get group info
+	group, err := s.GetGroup(groupID)
+	if err != nil {
+		log.Print("Error getting group info for notification:", err)
+		// Continue even if notification creation fails
+	} else {
+		// Get inviter name
+		var firstName, lastName string
+		userQuery := `SELECT first_name, last_name FROM users WHERE id = ?`
+		err = s.db.QueryRow(userQuery, inviterID).Scan(&firstName, &lastName)
+		if err != nil {
+			log.Print("Error getting inviter name:", err)
+			// Continue even if notification creation fails
+		} else {
+			// Create notification
+			notif := &notifications.Notification{
+				UserID:    inviteeID,
+				Type:      notifications.TypeGroupInvite,
+				Content:   fmt.Sprintf("%s %s invited you to join group: %s", firstName, lastName, group.Title),
+				RelatedID: groupID,
+				SenderID:  inviterID,
+				CreatedAt: time.Now(),
+			}
+			
+			err = s.CreateNotification(notif)
+			if err != nil {
+				log.Print("Error creating group invitation notification:", err)
+				// Continue even if notification creation fails
+			}
+		}
+	}
 
 	return nil
 }
@@ -364,6 +399,39 @@ func (s *SQLiteStore) RequestJoinGroup(groupID, userID int64) error {
 		log.Print("Error creating join request:", err)
 		return errors.ErrInternalServer
 	}
+	
+	// Create a notification for the group creator
+	// Get group info
+	group, err := s.GetGroup(groupID)
+	if err != nil {
+		log.Print("Error getting group info for notification:", err)
+		// Continue even if notification creation fails
+	} else {
+		// Get requester name
+		var firstName, lastName string
+		userQuery := `SELECT first_name, last_name FROM users WHERE id = ?`
+		err = s.db.QueryRow(userQuery, userID).Scan(&firstName, &lastName)
+		if err != nil {
+			log.Print("Error getting requester name:", err)
+			// Continue even if notification creation fails
+		} else {
+			// Create notification
+			notif := &notifications.Notification{
+				UserID:    group.CreatorID,
+				Type:      notifications.TypeJoinRequest,
+				Content:   fmt.Sprintf("%s %s wants to join your group: %s", firstName, lastName, group.Title),
+				RelatedID: groupID,
+				SenderID:  userID,
+				CreatedAt: time.Now(),
+			}
+			
+			err = s.CreateNotification(notif)
+			if err != nil {
+				log.Print("Error creating join request notification:", err)
+				// Continue even if notification creation fails
+			}
+		}
+	}
 
 	return nil
 }
@@ -431,6 +499,30 @@ func (s *SQLiteStore) AcceptGroupJoinRequest(groupID, userID int64) error {
 	if err != nil {
 		log.Print("Error accepting join request:", err)
 		return errors.ErrInternalServer
+	}
+	
+	// Create a notification for the user
+	// Get group info
+	group, err := s.GetGroup(groupID)
+	if err != nil {
+		log.Print("Error getting group info for notification:", err)
+		// Continue even if notification creation fails
+	} else {
+		// Create notification
+		notif := &notifications.Notification{
+			UserID:    userID,
+			Type:      "join_request_accepted",
+			Content:   fmt.Sprintf("Your request to join %s has been accepted", group.Title),
+			RelatedID: groupID,
+			SenderID:  group.CreatorID,
+			CreatedAt: time.Now(),
+		}
+		
+		err = s.CreateNotification(notif)
+		if err != nil {
+			log.Print("Error creating join acceptance notification:", err)
+			// Continue even if notification creation fails
+		}
 	}
 
 	return nil
@@ -568,6 +660,47 @@ func (s *SQLiteStore) CreateGroupEvent(event *groups.GroupEvent) (int64, error) 
 		log.Print("Error getting last insert ID:", err)
 		return 0, errors.ErrInternalServer
 	}
+	
+	// Create notifications for all group members
+	// Get group info
+	group, err := s.GetGroup(event.GroupID)
+	if err != nil {
+		log.Print("Error getting group info for notification:", err)
+		// Continue even if notification creation fails
+	} else {
+		// Get all group members
+		members, err := s.GetGroupMembers(event.GroupID)
+		if err != nil {
+			log.Print("Error getting group members for notifications:", err)
+			// Continue even if notification creation fails
+		} else {
+			// Get creator name
+			var firstName, lastName string
+			userQuery := `SELECT first_name, last_name FROM users WHERE id = ?`
+			err = s.db.QueryRow(userQuery, event.CreatorID).Scan(&firstName, &lastName)
+			if err != nil {
+				log.Print("Error getting creator name:", err)
+				// Continue even if notification creation fails
+			} else {
+				// Create notifications for each member except the creator
+				for _, member := range members {
+					if member.UserID != event.CreatorID {
+						notif := &notifications.Notification{
+							UserID:    member.UserID,
+							Type:      notifications.TypeEventCreated,
+							Content:   fmt.Sprintf("%s %s created a new event in %s: %s", firstName, lastName, group.Title, event.Title),
+							RelatedID: eventID,
+							SenderID:  event.CreatorID,
+							CreatedAt: time.Now(),
+						}
+						
+						// We don't check for errors here - if one notification fails, we still want to create others
+						s.CreateNotification(notif)
+					}
+				}
+			}
+		}
+	}
 
 	return eventID, nil
 }
@@ -693,12 +826,120 @@ func (s *SQLiteStore) GetEventResponses(eventID int64) ([]*groups.EventResponse,
 
 // CreateGroupPost creates a new post in a group
 func (s *SQLiteStore) CreateGroupPost(groupID, userID int64, post *posts.Post) (int64, error) {
-	// Implementation would go here
-	return 0, nil
+	// First, check if the user is a member of the group
+	isMember, err := s.IsGroupMember(groupID, userID)
+	if err != nil {
+		return 0, err
+	}
+	if !isMember {
+		return 0, errors.ErrUnauthorized
+	}
+	
+	// Validate post
+	if post.Content == "" && post.Image == "" {
+		return 0, errors.ErrInvalidInput
+	}
+	
+	// Validate privacy level
+	if post.PrivacyLevel == "" {
+		post.PrivacyLevel = posts.PrivacyPublic // Default to public
+	} else if post.PrivacyLevel != posts.PrivacyPublic && 
+		post.PrivacyLevel != posts.PrivacyAlmostPrivate && 
+		post.PrivacyLevel != posts.PrivacyPrivate {
+		return 0, errors.ErrInvalidInput
+	}
+	
+	// For group posts, override some privacy settings
+	// All group posts are private to the group by default
+	post.PrivacyLevel = posts.PrivacyPrivate
+	
+	// Insert the post with a reference to the group
+	query := `INSERT INTO posts (user_id, group_id, content, image, privacy_level, allowed_followers, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
+	
+	now := time.Now()
+	result, err := s.db.Exec(
+		query,
+		userID,
+		groupID,
+		post.Content,
+		post.Image,
+		post.PrivacyLevel,
+		post.AllowedFollowers,
+		now,
+		now,
+	)
+	if err != nil {
+		log.Print("Error creating group post:", err)
+		return 0, errors.ErrInternalServer
+	}
+	
+	postID, err := result.LastInsertId()
+	if err != nil {
+		log.Print("Error getting last insert ID:", err)
+		return 0, errors.ErrInternalServer
+	}
+	
+	return postID, nil
 }
 
 // GetGroupPosts gets all posts in a group
 func (s *SQLiteStore) GetGroupPosts(groupID int64) ([]*posts.Post, error) {
-	// Implementation would go here
-	return nil, nil
+	// First, check if the group exists
+	_, err := s.GetGroup(groupID)
+	if err != nil {
+		return nil, err
+	}
+	
+	// Query posts
+	query := `SELECT p.id, p.user_id, p.content, p.image, p.privacy_level, p.allowed_followers,
+			  p.created_at, p.updated_at,
+              (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes_count
+              FROM posts p
+              WHERE p.group_id = ?
+              ORDER BY p.created_at DESC`
+	
+	rows, err := s.db.Query(query, groupID)
+	if err != nil {
+		log.Print("Error querying group posts:", err)
+		return nil, errors.ErrInternalServer
+	}
+	defer rows.Close()
+	
+	var result []*posts.Post
+	for rows.Next() {
+		p := &posts.Post{}
+		err := rows.Scan(
+			&p.ID,
+			&p.UserID,
+			&p.Content,
+			&p.Image,
+			&p.PrivacyLevel,
+			&p.AllowedFollowers,
+			&p.CreatedAt,
+			&p.UpdatedAt,
+			&p.Likes,
+		)
+		if err != nil {
+			log.Print("Error scanning group post row:", err)
+			return nil, errors.ErrInternalServer
+		}
+		
+		// Get comments for this post
+		comments, err := s.getPostComments(p.ID)
+		if err != nil {
+			log.Print("Error getting comments:", err)
+			return nil, errors.ErrInternalServer
+		}
+		p.Comments = comments
+		
+		result = append(result, p)
+	}
+	
+	if err = rows.Err(); err != nil {
+		log.Print("Error iterating group post rows:", err)
+		return nil, errors.ErrInternalServer
+	}
+	
+	return result, nil
 }

@@ -106,6 +106,10 @@ func (s *APIServer) setupRouter() *http.ServeMux {
 	handleWithLog("POST /groups/{id}/events", utils.MakeHTTPHandleFunc(withJWTAuth(groupsHandler.HandleGroupCreateEvent)))
 	handleWithLog("GET /groups/{id}/events", utils.MakeHTTPHandleFunc(groupsHandler.HandleGroupListEvents))
 	handleWithLog("POST /groups/{id}/events/{eventId}/response", utils.MakeHTTPHandleFunc(withJWTAuth(groupsHandler.HandleEventResponse)))
+	
+	// GROUP POSTS ROUTES
+	handleWithLog("POST /groups/{id}/posts", utils.MakeHTTPHandleFunc(withJWTAuth(groupsHandler.HandleGroupCreatePost)))
+	handleWithLog("GET /groups/{id}/posts", utils.MakeHTTPHandleFunc(withJWTAuth(groupsHandler.HandleGroupListPosts)))
 
 	// CHAT ROUTES
 	handleWithLog("GET /chats", utils.MakeHTTPHandleFunc(withJWTAuth(chatHandler.HandleGetChats)))

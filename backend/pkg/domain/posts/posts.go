@@ -59,3 +59,9 @@ type Like struct {
 	PostID int64 `json:"post_id"`
 	UserID int64 `json:"user_id"`
 }
+
+// GroupPost represents a post in a group
+type GroupPost struct {
+	Post
+	GroupID int64 `json:"group_id"`
+}

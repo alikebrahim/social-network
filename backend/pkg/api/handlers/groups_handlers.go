@@ -542,6 +542,138 @@ func (h *GroupsHandler) HandleGroupListEvents(w http.ResponseWriter, r *http.Req
 	return utils.WriteJson(w, http.StatusOK, events)
 }
 
+// HandleGroupCreatePost handles creating a new post in a group
+func (h *GroupsHandler) HandleGroupCreatePost(w http.ResponseWriter, r *http.Request) error {
+	// Get logger from request context
+	log := logger.FromRequest(r)
+	
+	// Get group ID from the URL
+	idStr := r.PathValue("id")
+	groupID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		log.Error("Invalid group ID", "id", idStr, "error", err)
+		return errors.ErrBadRequest
+	}
+	
+	// Parse request body
+	var post posts.Post
+	if err := json.NewDecoder(r.Body).Decode(&post); err != nil {
+		log.Error("Failed to parse request body", "error", err)
+		return errors.ErrBadRequest
+	}
+	
+	// Validate post content
+	if post.Content == "" && post.Image == "" {
+		log.Warn("Invalid post: empty content and image")
+		return errors.ErrInvalidInput
+	}
+	
+	// Validate image format if provided
+	if post.Image != "" {
+		isValidFormat := false
+		validFormats := []string{".jpg", ".jpeg", ".png", ".gif"}
+		
+		// Simple extension check - in a real app, you would validate the actual file contents
+		for _, format := range validFormats {
+			if len(post.Image) > len(format) && post.Image[len(post.Image)-len(format):] == format {
+				isValidFormat = true
+				break
+			}
+		}
+		
+		if !isValidFormat {
+			log.Warn("Invalid image format", "image", post.Image)
+			return utils.WriteJson(w, http.StatusBadRequest, map[string]string{
+				"error": "Invalid image format. Supported formats: JPEG, PNG, GIF",
+			})
+		}
+	}
+	
+	// Get the user ID from the session
+	cookie, err := r.Cookie("session_token")
+	if err != nil {
+		log.Error("Failed to get session token", "error", err)
+		return errors.ErrUnauthorized
+	}
+	
+	userID, err := h.store.GetUserIdBySession(cookie.Value)
+	if err != nil {
+		log.Error("Failed to get user ID from session", "error", err)
+		return errors.ErrUnauthorized
+	}
+	
+	// Create the post
+	post.UserID = userID
+	post.CreatedAt = time.Now()
+	post.UpdatedAt = time.Now()
+	
+	postID, err := h.store.CreateGroupPost(groupID, userID, &post)
+	if err != nil {
+		if err == errors.ErrUnauthorized {
+			log.Warn("Unauthorized post creation attempt", "group_id", groupID, "user_id", userID)
+			return errors.ErrUnauthorized
+		}
+		log.Error("Failed to create group post", "error", err)
+		return err
+	}
+	
+	log.Info("Group post created", "group_id", groupID, "post_id", postID, "user_id", userID)
+	
+	return utils.WriteJson(w, http.StatusCreated, map[string]int64{
+		"post_id": postID,
+	})
+}
+
+// HandleGroupListPosts handles listing all posts in a group
+func (h *GroupsHandler) HandleGroupListPosts(w http.ResponseWriter, r *http.Request) error {
+	// Get logger from request context
+	log := logger.FromRequest(r)
+	
+	// Get group ID from the URL
+	idStr := r.PathValue("id")
+	groupID, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		log.Error("Invalid group ID", "id", idStr, "error", err)
+		return errors.ErrBadRequest
+	}
+	
+	// Get the user ID from the session
+	cookie, err := r.Cookie("session_token")
+	if err != nil {
+		log.Error("Failed to get session token", "error", err)
+		return errors.ErrUnauthorized
+	}
+	
+	userID, err := h.store.GetUserIdBySession(cookie.Value)
+	if err != nil {
+		log.Error("Failed to get user ID from session", "error", err)
+		return errors.ErrUnauthorized
+	}
+	
+	// Check if the user is a member of the group
+	isMember, err := h.store.IsGroupMember(groupID, userID)
+	if err != nil {
+		log.Error("Failed to check group membership", "error", err)
+		return err
+	}
+	
+	if !isMember {
+		log.Warn("Unauthorized access to group posts", "group_id", groupID, "user_id", userID)
+		return errors.ErrUnauthorized
+	}
+	
+	// Get the group posts
+	posts, err := h.store.GetGroupPosts(groupID)
+	if err != nil {
+		log.Error("Failed to get group posts", "error", err)
+		return err
+	}
+	
+	log.Info("Group posts retrieved", "group_id", groupID, "count", len(posts))
+	
+	return utils.WriteJson(w, http.StatusOK, posts)
+}
+
 // HandleEventResponse handles responding to an event
 func (h *GroupsHandler) HandleEventResponse(w http.ResponseWriter, r *http.Request) error {
 	// Get logger from request context
