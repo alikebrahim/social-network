@@ -3,6 +3,7 @@ package websocket
 import (
 	"encoding/json"
 	"log"
+	"strings"
 	"sync"
 	"time"
 
@@ -105,7 +106,7 @@ func (h *Hub) SendMessageToGroup(groupID int64, message []byte) {
 // ReadPump handles reading messages from the WebSocket
 func (c *Client) ReadPump() {
 	defer func() {
-		c.Hub.Register <- c
+		c.Hub.unregister <- c
 		c.Conn.Close()
 	}()
 
@@ -134,8 +135,32 @@ func (c *Client) ReadPump() {
 
 		// Add timestamp if not present
 		if _, ok := messageObj["timestamp"]; !ok {
-			messageObj["timestamp"] = time.Now()
+			messageObj["timestamp"] = time.Now().Format(time.RFC3339)
 			message, _ = json.Marshal(messageObj)
+		}
+
+		// Add the sender ID if not present
+		if _, ok := messageObj["sender_id"]; !ok {
+			messageObj["sender_id"] = c.UserID
+			message, _ = json.Marshal(messageObj)
+		}
+
+		// Check for emoji support
+		if content, ok := messageObj["content"].(string); ok {
+			// Basic emoji validation - ensure this content is valid UTF-8
+			if !isValidUTF8([]byte(content)) {
+				log.Printf("Invalid UTF-8 sequence in message content")
+				// Send an error message back to the client
+				errorMsg := map[string]interface{}{
+					"type":      "error",
+					"error":     "invalid_encoding",
+					"message":   "Your message contains invalid characters",
+					"timestamp": time.Now().Format(time.RFC3339),
+				}
+				errorJSON, _ := json.Marshal(errorMsg)
+				c.Send <- errorJSON
+				continue
+			}
 		}
 
 		// Send to appropriate recipients based on the message type
@@ -183,4 +208,9 @@ func (c *Client) WritePump() {
 			}
 		}
 	}
+}
+
+// Helper function to validate UTF-8 encoding (for emoji support)
+func isValidUTF8(b []byte) bool {
+	return strings.ToValidUTF8(string(b), "") == string(b)
 }

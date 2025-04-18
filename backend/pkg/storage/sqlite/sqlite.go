@@ -86,3 +86,8 @@ func (s *SQLiteStore) isFollowing(followerID, followedID int64) (bool, error) {
 func (s *SQLiteStore) IsFollowing(followerID, followedID int64) (bool, error) {
 	return s.isFollowing(followerID, followedID)
 }
+
+// DB returns the underlying database connection for direct queries
+func (s *SQLiteStore) DB() *sql.DB {
+	return s.db
+}

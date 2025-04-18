@@ -1,6 +1,7 @@
 package storage
 
 import (
+	"database/sql"
 	"socialNetwork/pkg/domain/auth"
 	"socialNetwork/pkg/domain/chat"
 	"socialNetwork/pkg/domain/following"
@@ -89,4 +90,7 @@ type Storage interface {
 	MarkNotificationAsRead(notificationID, userID int64) error
 	MarkAllNotificationsAsRead(userID int64) error
 	GetUnreadNotificationCount(userID int64) (int, error)
+	
+	// Database access for more complex operations
+	DB() *sql.DB
 }
