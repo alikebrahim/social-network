@@ -1,5 +1,17 @@
 package auth
 
+import "errors"
+
+// Common auth domain errors
+var (
+	ErrInvalidCredentials = errors.New("invalid email or password")
+	ErrUserNotFound       = errors.New("user not found")
+	ErrSessionExpired     = errors.New("session expired")
+	ErrEmailTaken         = errors.New("email is already taken")
+	ErrInvalidEmail       = errors.New("invalid email format")
+	ErrInvalidPassword    = errors.New("invalid password format")
+)
+
 // UserAccount represents a user account in the system
 type UserAccount struct {
 	ID            int64  `json:"id"`
@@ -18,6 +30,16 @@ type UserAccount struct {
 type LoginRequest struct {
 	Email    string `json:"email"`
 	Password string `json:"password"`
+}
+
+// RegistrationRequest is used when a user registers
+type RegistrationRequest struct {
+	Email         string `json:"email"`
+	Password      string `json:"password"`
+	First_name    string `json:"first_name"`
+	Last_name     string `json:"last_name"`
+	Date_of_birth string `json:"date_of_birth,omitempty"`
+	Profile_type  string `json:"profile_type"`
 }
 
 // Session represents a user session

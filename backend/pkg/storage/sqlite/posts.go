@@ -1,7 +1,9 @@
 package sqlite
 
 import (
+	"fmt"
 	"log"
+	"strings"
 	"time"
 
 	"socialNetwork/pkg/domain/posts"
@@ -298,7 +300,7 @@ func (s *SQLiteStore) CreateLike(like posts.Like) error {
 	}
 
 	if count > 0 {
-		return errors.ErrAlreadyExists
+		return errors.ErrConflict
 	}
 
 	// Insert like

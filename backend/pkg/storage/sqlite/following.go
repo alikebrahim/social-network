@@ -25,7 +25,7 @@ func (s *SQLiteStore) CreateFollowRequest(req following.FollowRequest) error {
 	}
 
 	if count > 0 {
-		return errors.ErrAlreadyExists
+		return errors.ErrConflict
 	}
 
 	// Check if the target profile is private

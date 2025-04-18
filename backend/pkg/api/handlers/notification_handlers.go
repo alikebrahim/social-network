@@ -1,12 +1,10 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
 	"strconv"
 
 	"socialNetwork/pkg/api/utils"
-	"socialNetwork/pkg/domain/notifications"
 	"socialNetwork/pkg/errors"
 	"socialNetwork/pkg/logger"
 	"socialNetwork/pkg/storage"

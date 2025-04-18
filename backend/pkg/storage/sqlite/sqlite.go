@@ -83,10 +83,7 @@ func (s *SQLiteStore) isFollowing(followerID, followedID int64) (bool, error) {
 	return count > 0, nil
 }
 
-// For public interface
-func (s *SQLiteStore) IsFollowing(followerID, followedID int64) (bool, error) {
-	return s.isFollowing(followerID, followedID)
-}
+// NOTE: IsFollowing is now implemented in following.go
 
 // DB returns the underlying database connection for direct queries
 func (s *SQLiteStore) DB() *sql.DB {

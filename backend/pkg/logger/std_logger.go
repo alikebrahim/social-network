@@ -35,7 +35,7 @@ type stdLogger struct {
 	logFile   *os.File    // File handle for log file
 }
 
-var defaultLogger Logger
+// defaultLogger is defined in logger.go
 
 func init() {
 	defaultConfig := Config{
@@ -190,6 +190,11 @@ func (l *stdLogger) WithField(key string, value interface{}) Logger {
 	newLogger.fields[key] = value
 
 	return newLogger
+}
+
+// With is an alias for WithField, for convenience
+func (l *stdLogger) With(key string, value interface{}) Logger {
+	return l.WithField(key, value)
 }
 
 func (l *stdLogger) WithFields(fields map[string]interface{}) Logger {

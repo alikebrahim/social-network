@@ -457,7 +457,7 @@ func (h *PostsHandler) HandlePostLike(w http.ResponseWriter, r *http.Request) er
 
 	err = h.store.CreateLike(like)
 	if err != nil {
-		if err == errors.ErrAlreadyExists {
+		if errors.IsConflict(err) {
 			log.Info("Post already liked", "post_id", postID, "user_id", userID)
 			return utils.WriteJson(w, http.StatusOK, map[string]string{
 				"message": "Post already liked",

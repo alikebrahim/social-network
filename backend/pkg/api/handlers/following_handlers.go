@@ -66,7 +66,7 @@ func (h *FollowingHandler) HandleFollowing(w http.ResponseWriter, r *http.Reques
 	err = h.store.CreateFollowRequest(followReq)
 	if err != nil {
 		// Check for already following error
-		if err == errors.ErrAlreadyExists {
+		if errors.IsConflict(err) {
 			log.Info("Already following or request pending", "follower", followerID, "followed", followedID)
 			return utils.WriteJson(w, http.StatusOK, map[string]string{
 				"message": "Already following or request pending",

@@ -227,7 +227,7 @@ func (s *SQLiteStore) InviteToGroup(groupID, inviterID, inviteeID int64) error {
 	}
 
 	if count > 0 {
-		return errors.ErrAlreadyExists
+		return errors.ErrConflict
 	}
 
 	// Create invitation (pending membership)
@@ -388,7 +388,7 @@ func (s *SQLiteStore) RequestJoinGroup(groupID, userID int64) error {
 	}
 
 	if count > 0 {
-		return errors.ErrAlreadyExists
+		return errors.ErrConflict
 	}
 
 	// Create join request

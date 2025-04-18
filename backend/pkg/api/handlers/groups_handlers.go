@@ -160,7 +160,7 @@ func (h *GroupsHandler) HandleGroupInvite(w http.ResponseWriter, r *http.Request
 	// Invite the user to the group
 	err = h.store.InviteToGroup(groupID, inviterID, invite.InviteeID)
 	if err != nil {
-		if err == errors.ErrAlreadyExists {
+		if errors.IsConflict(err) {
 			log.Info("User already invited or member", "group_id", groupID, "user_id", invite.InviteeID)
 			return utils.WriteJson(w, http.StatusOK, map[string]string{
 				"message": "User is already invited or a member of the group",
@@ -234,7 +234,7 @@ func (h *GroupsHandler) HandleGroupRequest(w http.ResponseWriter, r *http.Reques
 	// Request to join the group
 	err = h.store.RequestJoinGroup(groupID, requesterID)
 	if err != nil {
-		if err == errors.ErrAlreadyExists {
+		if errors.IsConflict(err) {
 			log.Info("Already requested or member", "group_id", groupID, "user_id", requesterID)
 			return utils.WriteJson(w, http.StatusOK, map[string]string{
 				"message": "Already requested to join or a member of the group",

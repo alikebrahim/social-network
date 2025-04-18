@@ -8,11 +8,7 @@ import (
 	"github.com/google/uuid"
 )
 
-type contextKeyType struct {
-	name string
-}
-
-var requestIDKey = &contextKeyType{"requestID"}
+// contextKey is defined in logger.go
 
 // RequestLogger is a middleware that logs HTTP requests
 func RequestLogger(next http.Handler) http.Handler {

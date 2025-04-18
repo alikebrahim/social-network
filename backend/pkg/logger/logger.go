@@ -62,6 +62,7 @@ type Logger interface {
 	Warn(msg string, keyvals ...interface{})
 	Error(msg string, keyvals ...interface{})
 	WithField(key string, value interface{}) Logger
+	With(key string, value interface{}) Logger  // Alias for WithField for easier chaining
 	WithFields(fields map[string]interface{}) Logger
 	WithPackage(pkg string) Logger
 	Close() error // Close any open resources
@@ -71,7 +72,11 @@ type contextKey struct {
 	name string
 }
 
-var loggerContextKey = &contextKey{"logger"}
+var (
+	loggerContextKey = &contextKey{"logger"}
+	requestIDKey = &contextKey{"requestID"}
+	defaultLogger Logger
+)
 
 // FromRequest retrieves the logger from the request context
 func FromRequest(r *http.Request) Logger {
@@ -82,14 +87,24 @@ func FromRequest(r *http.Request) Logger {
 	return logger
 }
 
-// WithContext adds a logger to a context
+// WithContext adds a logger to a context (deprecated, use WithLogger instead)
 func WithContext(ctx context.Context, logger Logger) context.Context {
+	return context.WithValue(ctx, loggerContextKey, logger)
+}
+
+// WithLogger adds a logger to a context
+func WithLogger(ctx context.Context, logger Logger) context.Context {
 	return context.WithValue(ctx, loggerContextKey, logger)
 }
 
 // GetLogger returns a logger instance for the given package
 func GetLogger(pkg string) Logger {
 	return defaultLogger.WithPackage(pkg)
+}
+
+// New returns a new logger instance
+func New() Logger {
+	return defaultLogger
 }
 
 // RequestID returns the request ID from the context
