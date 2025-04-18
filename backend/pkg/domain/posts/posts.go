@@ -1,17 +1,48 @@
 package posts
 
-import "time"
+import (
+	"fmt"
+	"strings"
+	"time"
+)
+
+// Privacy levels for posts
+const (
+	PrivacyPublic      = "public"      // Visible to all users
+	PrivacyAlmostPrivate = "almost_private" // Visible only to followers
+	PrivacyPrivate     = "private"     // Visible only to selected followers
+)
 
 // Post represents a user post
 type Post struct {
-	ID        int64     `json:"id"`
-	UserID    int64     `json:"user_id"`
-	Content   string    `json:"content"`
-	Image     string    `json:"image"`
-	CreatedAt time.Time `json:"created_at"`
-	UpdatedAt time.Time `json:"updated_at"`
-	Likes     int       `json:"likes"`
-	Comments  []Comment `json:"comments"`
+	ID              int64     `json:"id"`
+	UserID          int64     `json:"user_id"`
+	Content         string    `json:"content"`
+	Image           string    `json:"image"`
+	PrivacyLevel    string    `json:"privacy_level"`
+	AllowedFollowers string    `json:"allowed_followers,omitempty"` // Comma-separated list of user IDs for private posts
+	CreatedAt       time.Time `json:"created_at"`
+	UpdatedAt       time.Time `json:"updated_at"`
+	Likes           int       `json:"likes"`
+	Comments        []Comment `json:"comments"`
+}
+
+// GetAllowedFollowerIDs returns the slice of user IDs that are allowed to view a private post
+func (p *Post) GetAllowedFollowerIDs() []int64 {
+	if p.AllowedFollowers == "" {
+		return []int64{}
+	}
+	
+	// Convert comma-separated string to slice of int64
+	followerIDs := []int64{}
+	for _, idStr := range strings.Split(p.AllowedFollowers, ",") {
+		var id int64
+		_, err := fmt.Sscanf(idStr, "%d", &id)
+		if err == nil {
+			followerIDs = append(followerIDs, id)
+		}
+	}
+	return followerIDs
 }
 
 // Comment represents a comment on a post

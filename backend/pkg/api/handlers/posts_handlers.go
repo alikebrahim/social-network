@@ -44,6 +44,42 @@ func (h *PostsHandler) HandlePostCreate(w http.ResponseWriter, r *http.Request) 
 		log.Warn("Invalid post: empty content and image")
 		return errors.ErrInvalidInput
 	}
+	
+	// Validate image format if provided
+	if post.Image != "" {
+		isValidFormat := false
+		validFormats := []string{".jpg", ".jpeg", ".png", ".gif"}
+		
+		// Simple extension check - in a real app, you would validate the actual file contents
+		for _, format := range validFormats {
+			if len(post.Image) > len(format) && post.Image[len(post.Image)-len(format):] == format {
+				isValidFormat = true
+				break
+			}
+		}
+		
+		if !isValidFormat {
+			log.Warn("Invalid image format", "image", post.Image)
+			return utils.WriteJson(w, http.StatusBadRequest, map[string]string{
+				"error": "Invalid image format. Supported formats: JPEG, PNG, GIF",
+			})
+		}
+	}
+	
+	// Validate privacy level
+	if post.PrivacyLevel != "" {
+		if post.PrivacyLevel != posts.PrivacyPublic && 
+		   post.PrivacyLevel != posts.PrivacyAlmostPrivate && 
+		   post.PrivacyLevel != posts.PrivacyPrivate {
+			log.Warn("Invalid privacy level", "privacy_level", post.PrivacyLevel)
+			return utils.WriteJson(w, http.StatusBadRequest, map[string]string{
+				"error": "Invalid privacy level. Supported levels: public, almost_private, private",
+			})
+		}
+	} else {
+		// Default to public if not specified
+		post.PrivacyLevel = posts.PrivacyPublic
+	}
 
 	// Get user ID from session
 	cookie, err := r.Cookie("session_token")
@@ -147,6 +183,39 @@ func (h *PostsHandler) HandlePostEdit(w http.ResponseWriter, r *http.Request) er
 	if post.Content == "" && post.Image == "" {
 		log.Warn("Invalid post update: empty content and image")
 		return errors.ErrInvalidInput
+	}
+	
+	// Validate image format if provided
+	if post.Image != "" {
+		isValidFormat := false
+		validFormats := []string{".jpg", ".jpeg", ".png", ".gif"}
+		
+		// Simple extension check - in a real app, you would validate the actual file contents
+		for _, format := range validFormats {
+			if len(post.Image) > len(format) && post.Image[len(post.Image)-len(format):] == format {
+				isValidFormat = true
+				break
+			}
+		}
+		
+		if !isValidFormat {
+			log.Warn("Invalid image format", "image", post.Image)
+			return utils.WriteJson(w, http.StatusBadRequest, map[string]string{
+				"error": "Invalid image format. Supported formats: JPEG, PNG, GIF",
+			})
+		}
+	}
+	
+	// Validate privacy level if provided
+	if post.PrivacyLevel != "" {
+		if post.PrivacyLevel != posts.PrivacyPublic && 
+		   post.PrivacyLevel != posts.PrivacyAlmostPrivate && 
+		   post.PrivacyLevel != posts.PrivacyPrivate {
+			log.Warn("Invalid privacy level", "privacy_level", post.PrivacyLevel)
+			return utils.WriteJson(w, http.StatusBadRequest, map[string]string{
+				"error": "Invalid privacy level. Supported levels: public, almost_private, private",
+			})
+		}
 	}
 
 	// Get user ID from session

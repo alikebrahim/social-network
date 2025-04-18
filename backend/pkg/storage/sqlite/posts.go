@@ -22,7 +22,8 @@ func (s *SQLiteStore) GetPostByID(userID, postID int64) ([]posts.Post, error) {
 	}
 
 	// Query posts
-	query := `SELECT p.id, p.user_id, p.content, p.image, p.created_at, p.updated_at,
+	query := `SELECT p.id, p.user_id, p.content, p.image, p.privacy_level, p.allowed_followers,
+              p.created_at, p.updated_at,
               (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes_count
               FROM posts p
               WHERE p.id = ?`
@@ -42,6 +43,8 @@ func (s *SQLiteStore) GetPostByID(userID, postID int64) ([]posts.Post, error) {
 			&p.UserID,
 			&p.Content,
 			&p.Image,
+			&p.PrivacyLevel,
+			&p.AllowedFollowers,
 			&p.CreatedAt,
 			&p.UpdatedAt,
 			&p.Likes,
@@ -116,9 +119,24 @@ func (s *SQLiteStore) CreatePost(post posts.Post) (int64, error) {
 		return 0, errors.ErrInvalidInput
 	}
 
+	// Validate privacy level
+	if post.PrivacyLevel == "" {
+		post.PrivacyLevel = posts.PrivacyPublic // Default to public
+	} else if post.PrivacyLevel != posts.PrivacyPublic && 
+		post.PrivacyLevel != posts.PrivacyAlmostPrivate && 
+		post.PrivacyLevel != posts.PrivacyPrivate {
+		return 0, errors.ErrInvalidInput
+	}
+
+	// For private posts, ensure there's a list of allowed followers
+	if post.PrivacyLevel == posts.PrivacyPrivate && post.AllowedFollowers == "" {
+		// If no allowed followers specified for a private post, default to almost_private
+		post.PrivacyLevel = posts.PrivacyAlmostPrivate
+	}
+
 	// Insert post
-	query := `INSERT INTO posts (user_id, content, image, created_at, updated_at)
-              VALUES (?, ?, ?, ?, ?)`
+	query := `INSERT INTO posts (user_id, content, image, privacy_level, allowed_followers, created_at, updated_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?)`
 
 	now := time.Now()
 	result, err := s.db.Exec(
@@ -126,6 +144,8 @@ func (s *SQLiteStore) CreatePost(post posts.Post) (int64, error) {
 		post.UserID,
 		post.Content,
 		post.Image,
+		post.PrivacyLevel,
+		post.AllowedFollowers,
 		now,
 		now,
 	)
@@ -164,13 +184,39 @@ func (s *SQLiteStore) EditPost(post posts.Post) error {
 		return errors.ErrInvalidInput
 	}
 
+	// Validate privacy level
+	if post.PrivacyLevel != "" && 
+	   post.PrivacyLevel != posts.PrivacyPublic && 
+	   post.PrivacyLevel != posts.PrivacyAlmostPrivate && 
+	   post.PrivacyLevel != posts.PrivacyPrivate {
+		return errors.ErrInvalidInput
+	}
+
+	// For private posts, ensure there's a list of allowed followers
+	if post.PrivacyLevel == posts.PrivacyPrivate && post.AllowedFollowers == "" {
+		// If no allowed followers specified for a private post, default to almost_private
+		post.PrivacyLevel = posts.PrivacyAlmostPrivate
+	}
+
 	// Update post
-	query := `UPDATE posts SET content = ?, image = ?, updated_at = ? WHERE id = ?`
+	query := `UPDATE posts SET 
+			  content = ?, 
+			  image = ?,
+			  privacy_level = COALESCE(?, privacy_level),
+			  allowed_followers = CASE 
+			    WHEN ? IS NOT NULL THEN ?
+				ELSE allowed_followers
+			  END,
+			  updated_at = ? 
+			  WHERE id = ?`
 
 	result, err := s.db.Exec(
 		query,
 		post.Content,
 		post.Image,
+		post.PrivacyLevel,
+		post.AllowedFollowers, // For the IS NOT NULL check
+		post.AllowedFollowers,
 		time.Now(),
 		post.ID,
 	)
@@ -330,7 +376,8 @@ func (s *SQLiteStore) GetUserPosts(userID, requestorID int64, limit, offset int)
 	}
 
 	// Query posts
-	query := `SELECT p.id, p.user_id, p.content, p.image, p.created_at, p.updated_at,
+	query := `SELECT p.id, p.user_id, p.content, p.image, p.privacy_level, p.allowed_followers,
+			  p.created_at, p.updated_at,
 			  (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes_count
 			  FROM posts p
 			  WHERE p.user_id = ?
@@ -352,6 +399,8 @@ func (s *SQLiteStore) GetUserPosts(userID, requestorID int64, limit, offset int)
 			&p.UserID,
 			&p.Content,
 			&p.Image,
+			&p.PrivacyLevel,
+			&p.AllowedFollowers,
 			&p.CreatedAt,
 			&p.UpdatedAt,
 			&p.Likes,
@@ -382,10 +431,13 @@ func (s *SQLiteStore) GetUserPosts(userID, requestorID int64, limit, offset int)
 
 // CanUserSeePost checks if a user can see a post
 func (s *SQLiteStore) CanUserSeePost(userID, postID int64) (bool, error) {
-	// First, check if the post exists and get the post owner
+	// First, check if the post exists and get post details
 	var postOwnerID int64
-	postQuery := `SELECT user_id FROM posts WHERE id = ?`
-	err := s.db.QueryRow(postQuery, postID).Scan(&postOwnerID)
+	var privacyLevel string
+	var allowedFollowers string
+	
+	postQuery := `SELECT user_id, privacy_level, allowed_followers FROM posts WHERE id = ?`
+	err := s.db.QueryRow(postQuery, postID).Scan(&postOwnerID, &privacyLevel, &allowedFollowers)
 	if err != nil {
 		if err.Error() == "sql: no rows in result set" {
 			return false, nil // Post doesn't exist
@@ -399,29 +451,77 @@ func (s *SQLiteStore) CanUserSeePost(userID, postID int64) (bool, error) {
 		return true, nil
 	}
 
-	// Check if the post owner has a public profile
-	var profileType string
-	profileQuery := `SELECT profile_type FROM users WHERE id = ?`
-	err = s.db.QueryRow(profileQuery, postOwnerID).Scan(&profileType)
-	if err != nil {
-		log.Print("Error checking profile type:", err)
-		return false, errors.ErrInternalServer
-	}
+	// Check visibility based on privacy level
+	switch privacyLevel {
+	case posts.PrivacyPublic:
+		// Public posts are visible to everyone with profile visibility considerations
+		var profileType string
+		profileQuery := `SELECT profile_type FROM users WHERE id = ?`
+		err = s.db.QueryRow(profileQuery, postOwnerID).Scan(&profileType)
+		if err != nil {
+			log.Print("Error checking profile type:", err)
+			return false, errors.ErrInternalServer
+		}
 
-	// If profile is public, post is visible
-	if profileType == "public" {
-		return true, nil
-	}
+		// If profile is public, public post is visible to everyone
+		if profileType == "public" {
+			return true, nil
+		}
 
-	// For private profiles, check if the user is an accepted follower
-	followQuery := `SELECT COUNT(*) FROM followers 
-                   WHERE follower_id = ? AND followed_id = ? AND status = 'accepted'`
-	var count int
-	err = s.db.QueryRow(followQuery, userID, postOwnerID).Scan(&count)
-	if err != nil {
-		log.Print("Error checking follow status:", err)
-		return false, errors.ErrInternalServer
-	}
+		// For private profiles, public posts still require follower status
+		followQuery := `SELECT COUNT(*) FROM followers 
+					   WHERE follower_id = ? AND followed_id = ? AND status = 'accepted'`
+		var count int
+		err = s.db.QueryRow(followQuery, userID, postOwnerID).Scan(&count)
+		if err != nil {
+			log.Print("Error checking follow status:", err)
+			return false, errors.ErrInternalServer
+		}
+		return count > 0, nil
 
-	return count > 0, nil
+	case posts.PrivacyAlmostPrivate:
+		// Almost private posts are visible only to followers
+		followQuery := `SELECT COUNT(*) FROM followers 
+					   WHERE follower_id = ? AND followed_id = ? AND status = 'accepted'`
+		var count int
+		err = s.db.QueryRow(followQuery, userID, postOwnerID).Scan(&count)
+		if err != nil {
+			log.Print("Error checking follow status:", err)
+			return false, errors.ErrInternalServer
+		}
+		return count > 0, nil
+
+	case posts.PrivacyPrivate:
+		// Private posts are visible only to selected followers
+		if allowedFollowers == "" {
+			return false, nil
+		}
+
+		// Check if user is in the allowed followers list
+		// This is a simple implementation using string search
+		// In a production environment, you might want a many-to-many table for better performance
+		for _, idStr := range strings.Split(allowedFollowers, ",") {
+			var id int64
+			_, err := fmt.Sscanf(idStr, "%d", &id)
+			if err == nil && id == userID {
+				// User is in the allowed list, verify they are still a follower
+				followQuery := `SELECT COUNT(*) FROM followers 
+							   WHERE follower_id = ? AND followed_id = ? AND status = 'accepted'`
+				var count int
+				err = s.db.QueryRow(followQuery, userID, postOwnerID).Scan(&count)
+				if err != nil {
+					log.Print("Error checking follow status:", err)
+					return false, errors.ErrInternalServer
+				}
+				return count > 0, nil
+			}
+		}
+		return false, nil
+
+	default:
+		// Unknown privacy level, default to not visible
+		log.Print("Unknown privacy level:", privacyLevel)
+		return false, nil
+	}
+}
 }
