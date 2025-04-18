@@ -298,6 +298,88 @@ func (s *SQLiteStore) RemoveLikes(like posts.Like) error {
 	return nil
 }
 
+// GetUserPosts retrieves posts for a user profile
+func (s *SQLiteStore) GetUserPosts(userID, requestorID int64, limit, offset int) ([]posts.Post, error) {
+	// First check if requestor can see the user's posts
+	if userID != requestorID {
+		// Check if the target user has a public profile
+		var profileType string
+		profileQuery := `SELECT profile_type FROM users WHERE id = ?`
+		err := s.db.QueryRow(profileQuery, userID).Scan(&profileType)
+		if err != nil {
+			log.Print("Error checking profile type:", err)
+			return nil, errors.ErrInternalServer
+		}
+
+		// If private profile, check if requestor is an accepted follower
+		if profileType == "private" {
+			followQuery := `SELECT COUNT(*) FROM followers 
+						   WHERE follower_id = ? AND followed_id = ? AND status = 'accepted'`
+			var count int
+			err = s.db.QueryRow(followQuery, requestorID, userID).Scan(&count)
+			if err != nil {
+				log.Print("Error checking follow status:", err)
+				return nil, errors.ErrInternalServer
+			}
+
+			if count == 0 {
+				// Not a follower of private profile, return empty result
+				return []posts.Post{}, nil
+			}
+		}
+	}
+
+	// Query posts
+	query := `SELECT p.id, p.user_id, p.content, p.image, p.created_at, p.updated_at,
+			  (SELECT COUNT(*) FROM likes WHERE post_id = p.id) as likes_count
+			  FROM posts p
+			  WHERE p.user_id = ?
+			  ORDER BY p.created_at DESC
+			  LIMIT ? OFFSET ?`
+
+	rows, err := s.db.Query(query, userID, limit, offset)
+	if err != nil {
+		log.Print("Error querying user posts:", err)
+		return nil, errors.ErrInternalServer
+	}
+	defer rows.Close()
+
+	result := []posts.Post{}
+	for rows.Next() {
+		p := posts.Post{}
+		err := rows.Scan(
+			&p.ID,
+			&p.UserID,
+			&p.Content,
+			&p.Image,
+			&p.CreatedAt,
+			&p.UpdatedAt,
+			&p.Likes,
+		)
+		if err != nil {
+			log.Print("Error scanning post row:", err)
+			return nil, errors.ErrInternalServer
+		}
+
+		// Get comments for this post
+		comments, err := s.getPostComments(p.ID)
+		if err != nil {
+			log.Print("Error getting comments:", err)
+			return nil, errors.ErrInternalServer
+		}
+		p.Comments = comments
+
+		result = append(result, p)
+	}
+
+	if err = rows.Err(); err != nil {
+		log.Print("Error iterating post rows:", err)
+		return nil, errors.ErrInternalServer
+	}
+
+	return result, nil
+}
+
 // CanUserSeePost checks if a user can see a post
 func (s *SQLiteStore) CanUserSeePost(userID, postID int64) (bool, error) {
 	// First, check if the post exists and get the post owner

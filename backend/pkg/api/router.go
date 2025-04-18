@@ -75,6 +75,7 @@ func (s *APIServer) setupRouter() *http.ServeMux {
 	handleWithLog("GET /profiles/{id}", utils.MakeHTTPHandleFunc(profileHandler.HandleGetProfile))
 	handleWithLog("PUT /profiles/privacy", utils.MakeHTTPHandleFunc(withJWTAuth(profileHandler.HandleSetProfilePrivacy)))
 	handleWithLog("GET /profiles/{id}/activity", utils.MakeHTTPHandleFunc(withJWTAuth(profileHandler.HandleGetProfileActivity)))
+	handleWithLog("GET /profiles/{id}/posts", utils.MakeHTTPHandleFunc(withJWTAuth(profileHandler.HandleGetUserPosts)))
 
 	// FOLLOWING ROUTES
 	handleWithLog("POST /follow/{id}", utils.MakeHTTPHandleFunc(withJWTAuth(followingHandler.HandleFollowing)))

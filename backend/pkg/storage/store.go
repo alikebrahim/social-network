@@ -81,6 +81,7 @@ type Storage interface {
 	// Profile operations
 	GetProfileData(*profile.Profile) (*profile.Profile, error)
 	SetProfilePrivacy(profile.Profile, string) error
+	GetUserPosts(userID, requestorID int64, limit, offset int) ([]posts.Post, error)
 	
 	// Notification operations
 	CreateNotification(*notifications.Notification) error

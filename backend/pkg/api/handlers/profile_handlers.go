@@ -164,11 +164,120 @@ func (h *ProfileHandler) HandleSetProfilePrivacy(w http.ResponseWriter, r *http.
 
 // HandleGetProfileActivity handles retrieving a user's activity
 func (h *ProfileHandler) HandleGetProfileActivity(w http.ResponseWriter, r *http.Request) error {
-	// TODO: Implement profile activity functionality
-	// This would include recent posts, comments, likes, etc.
+	// Get logger from request context
+	log := logger.FromRequest(r)
 	
-	// For now, return a placeholder response
-	return utils.WriteJson(w, http.StatusOK, map[string]string{
-		"message": "Profile activity feature coming soon",
+	// Get profile ID from request
+	idStr := r.PathValue("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		log.Error("Invalid profile ID", "id", idStr, "error", err)
+		return errors.ErrBadRequest
+	}
+	
+	// Get the requesting user's ID from the session
+	cookie, err := r.Cookie("session_token")
+	if err != nil {
+		log.Error("Failed to get session token", "error", err)
+		return errors.ErrUnauthorized
+	}
+	
+	requestID, err := h.store.GetUserIdBySession(cookie.Value)
+	if err != nil {
+		log.Error("Failed to get user ID from session", "error", err)
+		return errors.ErrUnauthorized
+	}
+	
+	// Get limit and offset from query params, default to 10 and 0
+	limitParam := r.URL.Query().Get("limit")
+	offsetParam := r.URL.Query().Get("offset")
+	
+	limit := 10
+	offset := 0
+	
+	if limitParam != "" {
+		limit, err = strconv.Atoi(limitParam)
+		if err != nil || limit < 1 {
+			limit = 10
+		}
+	}
+	
+	if offsetParam != "" {
+		offset, err = strconv.Atoi(offsetParam)
+		if err != nil || offset < 0 {
+			offset = 0
+		}
+	}
+	
+	// Get user posts with visibility check
+	posts, err := h.store.GetUserPosts(id, requestID, limit, offset)
+	if err != nil {
+		log.Error("Failed to get user posts", "error", err)
+		return err
+	}
+	
+	return utils.WriteJson(w, http.StatusOK, map[string]interface{}{
+		"posts": posts,
+		"count": len(posts),
+	})
+}
+
+// HandleGetUserPosts handles retrieving a user's posts
+func (h *ProfileHandler) HandleGetUserPosts(w http.ResponseWriter, r *http.Request) error {
+	// Get logger from request context
+	log := logger.FromRequest(r)
+	
+	// Get profile ID from request
+	idStr := r.PathValue("id")
+	id, err := strconv.ParseInt(idStr, 10, 64)
+	if err != nil {
+		log.Error("Invalid profile ID", "id", idStr, "error", err)
+		return errors.ErrBadRequest
+	}
+	
+	// Get the requesting user's ID from the session
+	cookie, err := r.Cookie("session_token")
+	if err != nil {
+		log.Error("Failed to get session token", "error", err)
+		return errors.ErrUnauthorized
+	}
+	
+	requestID, err := h.store.GetUserIdBySession(cookie.Value)
+	if err != nil {
+		log.Error("Failed to get user ID from session", "error", err)
+		return errors.ErrUnauthorized
+	}
+	
+	// Get limit and offset from query params, default to 10 and 0
+	limitParam := r.URL.Query().Get("limit")
+	offsetParam := r.URL.Query().Get("offset")
+	
+	limit := 10
+	offset := 0
+	
+	if limitParam != "" {
+		limit, err = strconv.Atoi(limitParam)
+		if err != nil || limit < 1 {
+			limit = 10
+		}
+	}
+	
+	if offsetParam != "" {
+		offset, err = strconv.Atoi(offsetParam)
+		if err != nil || offset < 0 {
+			offset = 0
+		}
+	}
+	
+	// Get user posts with visibility check
+	posts, err := h.store.GetUserPosts(id, requestID, limit, offset)
+	if err != nil {
+		log.Error("Failed to get user posts", "error", err)
+		return err
+	}
+	
+	return utils.WriteJson(w, http.StatusOK, map[string]interface{}{
+		"posts": posts,
+		"count": len(posts),
 	})
 }

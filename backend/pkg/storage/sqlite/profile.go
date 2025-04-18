@@ -46,7 +46,7 @@ func (s *SQLiteStore) GetProfileData(p *profile.Profile) (*profile.Profile, erro
 	p.LastActivity = time.Now() // Just use current time for last activity
 	
 	// Get follower count
-	err = s.db.QueryRow("SELECT COUNT(*) FROM followers WHERE following_id = ?", p.UserID).Scan(&p.Followers)
+	err = s.db.QueryRow("SELECT COUNT(*) FROM followers WHERE followed_id = ?", p.UserID).Scan(&p.Followers)
 	if err != nil {
 		log.Print("Error getting follower count:", err)
 		p.Followers = 0 // Default to 0 on error
