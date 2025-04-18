@@ -7,6 +7,7 @@ import (
 	"time"
 
 	"socialNetwork/pkg/api/utils"
+	"socialNetwork/pkg/domain/notifications"
 	"socialNetwork/pkg/domain/posts"
 	"socialNetwork/pkg/errors"
 	"socialNetwork/pkg/logger"
@@ -375,6 +376,35 @@ func (h *PostsHandler) HandlePostComment(w http.ResponseWriter, r *http.Request)
 	}
 
 	log.Info("Comment created", "post_id", postID, "user_id", userID)
+	
+	// Create a notification for the post owner if the commenter is not the owner
+	// Get the post owner ID
+	var postsList []posts.Post
+	postsList, err = h.store.GetPostByID(postID, userID)
+	if err == nil && len(postsList) > 0 {
+		postOwnerID := postsList[0].UserID
+		
+		// Don't notify if you're commenting on your own post
+		if postOwnerID != userID {
+			// Create notification
+			notification := &notifications.Notification{
+				UserID:    postOwnerID,
+				Type:      notifications.TypeComment,
+				Content:   "Someone commented on your post",
+				RelatedID: postID,
+				SenderID:  userID,
+				CreatedAt: time.Now(),
+			}
+			
+			err = h.store.CreateNotification(notification)
+			if err != nil {
+				// Log but don't return the error - comment was still created successfully
+				log.Error("Failed to create notification for post comment", "error", err)
+			} else {
+				log.Debug("Comment notification created", "post_id", postID, "owner_id", postOwnerID)
+			}
+		}
+	}
 
 	return utils.WriteJson(w, http.StatusCreated, map[string]string{
 		"message": "Comment added successfully",
@@ -438,6 +468,35 @@ func (h *PostsHandler) HandlePostLike(w http.ResponseWriter, r *http.Request) er
 	}
 
 	log.Info("Post liked", "post_id", postID, "user_id", userID)
+	
+	// Create a notification for the post owner if the liker is not the owner
+	// Get the post owner ID
+	var postsList []posts.Post
+	postsList, err = h.store.GetPostByID(postID, userID)
+	if err == nil && len(postsList) > 0 {
+		postOwnerID := postsList[0].UserID
+		
+		// Don't notify if you're liking your own post
+		if postOwnerID != userID {
+			// Create notification
+			notification := &notifications.Notification{
+				UserID:    postOwnerID,
+				Type:      notifications.TypeLike,
+				Content:   "Someone liked your post",
+				RelatedID: postID,
+				SenderID:  userID,
+				CreatedAt: time.Now(),
+			}
+			
+			err = h.store.CreateNotification(notification)
+			if err != nil {
+				// Log but don't return the error - like was still created successfully
+				log.Error("Failed to create notification for post like", "error", err)
+			} else {
+				log.Debug("Like notification created", "post_id", postID, "owner_id", postOwnerID)
+			}
+		}
+	}
 
 	return utils.WriteJson(w, http.StatusOK, map[string]string{
 		"message": "Post liked successfully",

@@ -10,14 +10,25 @@ import (
 	"github.com/gorilla/websocket"
 )
 
+// MessageType for different WebSocket message types
+type MessageType string
+
+const (
+	MessageTypeChat         MessageType = "chat"
+	MessageTypeGroupChat    MessageType = "group_chat"
+	MessageTypeNotification MessageType = "notification"
+	MessageTypeError        MessageType = "error"
+)
+
 // Client represents a connected websocket client
 type Client struct {
-	Hub      *Hub
-	Conn     *websocket.Conn
-	Send     chan []byte
-	UserID   int64
-	TargetID int64 // Can be either user ID or group ID
-	IsGroup  bool
+	Hub         *Hub
+	Conn        *websocket.Conn
+	Send        chan []byte
+	UserID      int64
+	TargetID    int64 // Can be either user ID or group ID
+	IsGroup     bool
+	IsNotifConn bool // Indicates if this is a notification WebSocket connection
 }
 
 // Hub manages WebSocket connections
@@ -95,6 +106,23 @@ func (h *Hub) SendMessageToGroup(groupID int64, message []byte) {
 		if client.IsGroup && client.TargetID == groupID {
 			select {
 			case client.Send <- message:
+			default:
+				close(client.Send)
+				delete(h.clients, client)
+			}
+		}
+	}
+}
+
+// SendNotification sends a notification to a specific user's notification WebSocket
+func (h *Hub) SendNotification(userID int64, notification []byte) {
+	h.mutex.Lock()
+	defer h.mutex.Unlock()
+
+	for client := range h.clients {
+		if client.IsNotifConn && client.UserID == userID {
+			select {
+			case client.Send <- notification:
 			default:
 				close(client.Send)
 				delete(h.clients, client)

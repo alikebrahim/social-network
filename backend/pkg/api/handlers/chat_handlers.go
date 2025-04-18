@@ -225,6 +225,89 @@ func (h *ChatHandler) HandleChatWebSocket(w http.ResponseWriter, r *http.Request
 	}()
 }
 
+// HandleNotificationWebSocket handles WebSocket connections for real-time notifications
+func (h *ChatHandler) HandleNotificationWebSocket(w http.ResponseWriter, r *http.Request) {
+	// Get the user ID from the session
+	userID, err := getUserIDFromRequest(r, h.store)
+	if err != nil {
+		http.Error(w, "Unauthorized", http.StatusUnauthorized)
+		return
+	}
+
+	// Upgrade the HTTP connection to a WebSocket connection
+	conn, err := upgrader.Upgrade(w, r, nil)
+	if err != nil {
+		log.Println("Error upgrading connection:", err)
+		return
+	}
+
+	// Create a new client specifically for notifications
+	client := &websocket.Client{
+		Hub:         h.hub,
+		Conn:        conn,
+		Send:        make(chan []byte, 256),
+		UserID:      userID,
+		TargetID:    0, // Not applicable for notification connections
+		IsGroup:     false,
+		IsNotifConn: true,
+	}
+
+	// Register the client with the hub
+	h.hub.Register <- client
+
+	// Start the client's read and write pumps
+	go client.WritePump()
+
+	// For notification WebSockets, we don't need to handle incoming messages
+	// Just keep the connection alive with pings
+	go func() {
+		ticker := time.NewTicker(30 * time.Second)
+		defer ticker.Stop()
+
+		for {
+			select {
+			case <-ticker.C:
+				// Send a ping to keep the connection alive
+				if err := conn.WriteMessage(gorillaws.PingMessage, nil); err != nil {
+					return
+				}
+			}
+		}
+	}()
+
+	// Send any unread notifications immediately upon connection
+	go func() {
+		// Get unread notifications count
+		count, err := h.store.GetUnreadNotificationCount(userID)
+		if err != nil {
+			log.Printf("Error getting unread notifications count: %v", err)
+			return
+		}
+
+		// If there are unread notifications, send them
+		if count > 0 {
+			// Get the most recent notifications
+			notifs, err := h.store.GetNotifications(userID, 10, 0)
+			if err != nil {
+				log.Printf("Error getting notifications: %v", err)
+				return
+			}
+
+			// Create notification message
+			notifMsg := map[string]interface{}{
+				"type":          string(websocket.MessageTypeNotification),
+				"notifications": notifs.Notifications,
+				"count":         count,
+				"timestamp":     time.Now().Format(time.RFC3339),
+			}
+
+			// Send to client
+			notifJSON, _ := json.Marshal(notifMsg)
+			client.Send <- notifJSON
+		}
+	}()
+}
+
 // HandleGroupChatWebSocket handles WebSocket connections for group chats
 func (h *ChatHandler) HandleGroupChatWebSocket(w http.ResponseWriter, r *http.Request) {
 	// Get the user ID from the session

@@ -15,6 +15,9 @@ import (
 type Storage interface {
 	// Initialize storage
 	Init() error
+	
+	// Set WebSocket hub for real-time notifications
+	SetHub(hub interface{})
 
 
 	// Auth operations

@@ -1,6 +1,7 @@
 package sqlite
 
 import (
+	"encoding/json"
 	"log"
 	"time"
 
@@ -18,7 +19,7 @@ func (s *SQLiteStore) CreateNotification(notification *notifications.Notificatio
 		notification.CreatedAt = time.Now()
 	}
 
-	_, err := s.db.Exec(
+	result, err := s.db.Exec(
 		query,
 		notification.UserID,
 		notification.Type,
@@ -31,6 +32,52 @@ func (s *SQLiteStore) CreateNotification(notification *notifications.Notificatio
 	if err != nil {
 		log.Print("Error creating notification:", err)
 		return errors.ErrInternalServer
+	}
+	
+	// Get the inserted notification ID
+	notificationID, err := result.LastInsertId()
+	if err != nil {
+		log.Print("Error getting notification ID:", err)
+		// Continue without the ID - not critical
+	} else {
+		notification.ID = notificationID
+	}
+	
+	// Get sender information to complete the notification
+	if notification.SenderID > 0 {
+		query := `SELECT first_name || ' ' || last_name as sender_name, avatar 
+				 FROM users WHERE id = ?`
+		err = s.db.QueryRow(query, notification.SenderID).Scan(&notification.SenderName, &notification.SenderImage)
+		if err != nil {
+			log.Print("Error getting sender information:", err)
+			// Continue without sender info - not critical
+		}
+	}
+	
+	// Send real-time notification via WebSocket if hub is available
+	if s.hub != nil {
+		// Check if hub implements SendNotification method
+		if hub, ok := s.hub.(interface{ SendNotification(int64, []byte) }); ok {
+			// Create notification message
+			notifMsg := map[string]interface{}{
+				"type":         "notification",
+				"notification": notification,
+				"timestamp":    time.Now().Format(time.RFC3339),
+			}
+			
+			// Marshal to JSON
+			notifJSON, err := json.Marshal(notifMsg)
+			if err != nil {
+				log.Print("Error marshaling notification:", err)
+				// Continue without real-time notification - not critical
+			} else {
+				// Send to the user's notification WebSocket connection
+				hub.SendNotification(notification.UserID, notifJSON)
+				s.logger.Debug("Sent real-time notification", 
+					"user_id", notification.UserID, 
+					"type", notification.Type)
+			}
+		}
 	}
 
 	return nil

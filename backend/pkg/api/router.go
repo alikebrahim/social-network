@@ -119,6 +119,7 @@ func (s *APIServer) setupRouter() *http.ServeMux {
 	// WebSocket handlers (these don't use makeHTTPHandleFunc because they handle their own responses)
 	handleWithLog("/ws/chat/{userId}", chatHandler.HandleChatWebSocket)
 	handleWithLog("/ws/groups/{id}/chat", chatHandler.HandleGroupChatWebSocket)
+	handleWithLog("/ws/notifications", chatHandler.HandleNotificationWebSocket)
 	
 	// NOTIFICATION ROUTES
 	handleWithLog("GET /notifications", utils.MakeHTTPHandleFunc(withJWTAuth(notificationHandler.HandleGetNotifications)))
@@ -126,7 +127,7 @@ func (s *APIServer) setupRouter() *http.ServeMux {
 	handleWithLog("PUT /notifications/read-all", utils.MakeHTTPHandleFunc(withJWTAuth(notificationHandler.HandleMarkAllNotificationsRead)))
 	handleWithLog("GET /notifications/unread-count", utils.MakeHTTPHandleFunc(withJWTAuth(notificationHandler.HandleGetUnreadCount)))
 
-	log.Info("Router setup complete", "routes", 37)
+	log.Info("Router setup complete", "routes", 38)
 	return mux
 }
 

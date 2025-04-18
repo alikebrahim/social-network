@@ -4,3 +4,4 @@
 - Update readme with
     - Instructions for server config with env vars: using direnv.
     - Instructions for manual migrations with goose
+- Remove uneccesary comments and improve others that are useful

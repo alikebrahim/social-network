@@ -9,6 +9,7 @@ const (
 	TypeJoinRequest   = "join_request"
 	TypeEventCreated  = "event_created"
 	TypeComment       = "comment"
+	TypeLike          = "like"
 )
 
 // Notification represents a user notification

@@ -12,6 +12,7 @@ import (
 type SQLiteStore struct {
 	db     *sql.DB
 	logger logger.Logger
+	hub    interface{} // For WebSocket notifications
 }
 
 // Init verifies the database connection
@@ -90,4 +91,9 @@ func (s *SQLiteStore) IsFollowing(followerID, followedID int64) (bool, error) {
 // DB returns the underlying database connection for direct queries
 func (s *SQLiteStore) DB() *sql.DB {
 	return s.db
+}
+
+// SetHub sets the WebSocket hub for real-time notifications
+func (s *SQLiteStore) SetHub(hub interface{}) {
+	s.hub = hub
 }
