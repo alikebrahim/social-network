@@ -2,6 +2,7 @@ package sqlite
 
 import (
 	"database/sql"
+	"os"
 	"time"
 
 	_ "github.com/mattn/go-sqlite3"
@@ -26,8 +27,11 @@ func NewSQLiteStore() (*SQLiteStore, error) {
 	// Get logger for sqlite package
 	log := logger.GetLogger("storage/sqlite")
 	
-	// Using relative path for the database
-	connStr := "./pkg/db/sqlite/main.db"
+	// Get database path from environment variable or use default
+	connStr := os.Getenv("DB_PATH")
+	if connStr == "" {
+		connStr = "./pkg/db/sqlite/main.db"
+	}
 	log.Info("Opening database connection", "path", connStr)
 
 	db, err := sql.Open("sqlite3", connStr)

@@ -1,7 +1,6 @@
 package logger
 
 import (
-	"context"
 	"net/http"
 	"strings"
 )
@@ -68,33 +67,30 @@ type Logger interface {
 	Close() error // Close any open resources
 }
 
-type contextKey struct {
-	name string
-}
-
 var (
-	loggerContextKey = &contextKey{"logger"}
-	requestIDKey = &contextKey{"requestID"}
+	// Global logger storage map - in a real app, you'd use a concurrency-safe map
+	loggerMap = make(map[string]Logger)
 	defaultLogger Logger
 )
 
-// FromRequest retrieves the logger from the request context
+// StoreLogger stores a logger with the given request ID
+func StoreLogger(requestID string, logger Logger) {
+	loggerMap[requestID] = logger
+}
+
+// FromRequest retrieves the logger from the request header
 func FromRequest(r *http.Request) Logger {
-	logger, ok := r.Context().Value(loggerContextKey).(Logger)
+	requestID := r.Header.Get("X-Request-ID")
+	if requestID == "" {
+		return GetLogger("unknown")
+	}
+	
+	logger, ok := loggerMap[requestID]
 	if !ok {
 		return GetLogger("unknown")
 	}
+	
 	return logger
-}
-
-// WithContext adds a logger to a context (deprecated, use WithLogger instead)
-func WithContext(ctx context.Context, logger Logger) context.Context {
-	return context.WithValue(ctx, loggerContextKey, logger)
-}
-
-// WithLogger adds a logger to a context
-func WithLogger(ctx context.Context, logger Logger) context.Context {
-	return context.WithValue(ctx, loggerContextKey, logger)
 }
 
 // GetLogger returns a logger instance for the given package
@@ -107,10 +103,10 @@ func New() Logger {
 	return defaultLogger
 }
 
-// RequestID returns the request ID from the context
+// RequestID returns the request ID from the header
 func RequestID(r *http.Request) string {
-	id, ok := r.Context().Value(requestIDKey).(string)
-	if !ok {
+	id := r.Header.Get("X-Request-ID")
+	if id == "" {
 		return "no-request-id"
 	}
 	return id
@@ -122,7 +118,6 @@ func Init(config Config) {
 }
 
 // RequestMiddleware creates a middleware that logs HTTP requests
-// Note: This is an alias for RequestLogger to match the PHASE-7 documentation
 func RequestMiddleware() func(http.Handler) http.Handler {
 	return RequestLogger
 }

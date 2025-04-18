@@ -68,8 +68,9 @@ func (h *FollowingHandler) HandleFollowing(w http.ResponseWriter, r *http.Reques
 		// Check for already following error
 		if errors.IsConflict(err) {
 			log.Info("Already following or request pending", "follower", followerID, "followed", followedID)
-			return utils.WriteJson(w, http.StatusOK, map[string]string{
+			return utils.WriteJson(w, http.StatusConflict, map[string]string{
 				"message": "Already following or request pending",
+				"status": "conflict"
 			})
 		}
 		log.Error("Failed to create follow request", "error", err)
@@ -78,7 +79,7 @@ func (h *FollowingHandler) HandleFollowing(w http.ResponseWriter, r *http.Reques
 
 	log.Info("Follow request created", "follower", followerID, "followed", followedID)
 
-	return utils.WriteJson(w, http.StatusOK, map[string]string{
+	return utils.WriteJson(w, http.StatusCreated, map[string]string{
 		"message": "Follow request sent successfully",
 	})
 }
@@ -154,6 +155,7 @@ func (h *FollowingHandler) HandleFollowingAccept(w http.ResponseWriter, r *http.
 
 	return utils.WriteJson(w, http.StatusOK, map[string]string{
 		"message": "Follow request accepted",
+		"status": "accepted"
 	})
 }
 
@@ -198,5 +200,6 @@ func (h *FollowingHandler) HandleFollowingReject(w http.ResponseWriter, r *http.
 
 	return utils.WriteJson(w, http.StatusOK, map[string]string{
 		"message": "Follow request rejected",
+		"status": "rejected"
 	})
 }

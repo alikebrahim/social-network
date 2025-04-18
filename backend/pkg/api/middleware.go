@@ -1,22 +1,39 @@
 package api
 
 import (
-	"context"
+	"fmt"
 	"net/http"
+	"time"
 
+	"github.com/google/uuid"
+	
 	"socialNetwork/pkg/api/utils"
 	"socialNetwork/pkg/errors"
 	"socialNetwork/pkg/logger"
 	"socialNetwork/pkg/storage"
 )
 
-// AuthMiddleware is a middleware that checks if the user is authenticated
+type userAuthKey struct{}
+
+var UserAuthKey = &userAuthKey{}
+
+func RequestWithUserID(r *http.Request, userID int64) *http.Request {
+	// Create a shallow copy of the request
+	newRequest := *r
+	// Create a shallow copy of the URL
+	if r.URL != nil {
+		url := *r.URL
+		newRequest.URL = &url
+	}
+	// Store user ID directly in the request
+	newRequest.Header.Set("X-User-ID", fmt.Sprintf("%d", userID))
+	return &newRequest
+}
+
 func AuthMiddleware(next http.Handler, store storage.Storage) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Get a logger
 		log := logger.FromRequest(r)
 
-		// Get the session token from the cookie
 		cookie, err := r.Cookie("session_token")
 		if err != nil {
 			if err == http.ErrNoCookie {
@@ -27,7 +44,6 @@ func AuthMiddleware(next http.Handler, store storage.Storage) http.Handler {
 			return
 		}
 
-		// Verify the session token
 		sessionToken := cookie.Value
 		userID, err := store.GetUserIdBySession(sessionToken)
 		if err != nil {
@@ -40,43 +56,37 @@ func AuthMiddleware(next http.Handler, store storage.Storage) http.Handler {
 			return
 		}
 
-		// Add user ID to the request context
-		ctx := context.WithValue(r.Context(), "user_id", userID)
-		
-		// Session is valid, call the next handler with the updated context
-		next.ServeHTTP(w, r.WithContext(ctx))
+		// Create a new request with the user ID in header instead of context
+		newReq := RequestWithUserID(r, userID)
+		next.ServeHTTP(w, newReq)
 	})
 }
 
-// LoggerMiddleware adds a logger to the request context
 func LoggerMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Create a logger for this request
+		// Create a logger with request info
 		log := logger.New().With("request_path", r.URL.Path).With("method", r.Method)
 		
-		// Add the logger to the request context
-		ctx := logger.WithLogger(r.Context(), log)
+		// Store logger ID in request header
+		requestID := uuid.New().String()
+		r.Header.Set("X-Request-ID", requestID)
+		logger.StoreLogger(requestID, log)
 		
-		// Call the next handler with the updated context
-		next.ServeHTTP(w, r.WithContext(ctx))
+		next.ServeHTTP(w, r)
 	})
 }
 
-// CORSMiddleware handles Cross-Origin Resource Sharing (CORS)
 func CORSMiddleware(next http.Handler) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		// Set CORS headers
 		w.Header().Set("Access-Control-Allow-Origin", "*")
 		w.Header().Set("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		w.Header().Set("Access-Control-Allow-Headers", "Content-Type, Authorization")
 		
-		// Handle preflight requests
 		if r.Method == "OPTIONS" {
 			w.WriteHeader(http.StatusOK)
 			return
 		}
 		
-		// Call the next handler
 		next.ServeHTTP(w, r)
 	})
 }

@@ -1,7 +1,6 @@
 package logger
 
 import (
-	"context"
 	"net/http"
 	"time"
 
@@ -17,7 +16,7 @@ func RequestLogger(next http.Handler) http.Handler {
 
 		// Generate a request ID
 		requestID := uuid.New().String()
-		ctx := context.WithValue(r.Context(), requestIDKey, requestID)
+		r.Header.Set("X-Request-ID", requestID)
 
 		// Create a logger with request info
 		requestLogger := GetLogger("api").WithFields(map[string]interface{}{
@@ -28,9 +27,8 @@ func RequestLogger(next http.Handler) http.Handler {
 			"user_agent": r.UserAgent(),
 		})
 
-		// Add the logger to the request context
-		ctx = WithContext(ctx, requestLogger)
-		r = r.WithContext(ctx)
+		// Store the logger in our map
+		StoreLogger(requestID, requestLogger)
 
 		// Create a response writer that tracks status code
 		rw := newResponseWriter(w)
@@ -45,6 +43,9 @@ func RequestLogger(next http.Handler) http.Handler {
 			"status":   rw.status,
 			"duration": duration.Milliseconds(),
 		}).Info("Request completed")
+		
+		// Optionally clean up the logger (in a production app, you'd use a TTL cache)
+		// delete(loggerMap, requestID)
 	})
 }
 

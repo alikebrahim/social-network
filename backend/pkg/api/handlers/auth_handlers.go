@@ -4,6 +4,8 @@ import (
 	"encoding/json"
 	"net/http"
 	"strings"
+	"time"
+	"unicode"
 
 	"socialNetwork/pkg/api/utils"
 	"socialNetwork/pkg/domain/auth"
@@ -12,69 +14,70 @@ import (
 	"socialNetwork/pkg/storage"
 )
 
-// AuthHandler manages authentication-related handlers
 type AuthHandler struct {
 	store storage.Storage
 }
 
-// NewAuthHandler creates a new authentication handler
 func NewAuthHandler(store storage.Storage) *AuthHandler {
 	return &AuthHandler{
 		store: store,
 	}
 }
 
-// validateEmail performs basic email validation
 func validateEmail(email string) error {
 	if email == "" {
 		return errors.ErrInvalidEmail
 	}
 	
-	if !strings.Contains(email, "@") || !strings.Contains(email, ".") {
-		return errors.ErrInvalidEmail
+	parts := strings.Split(email, "@")
+	if len(parts) != 2 || parts[0] == "" || parts[1] == "" {
+		return errors.ErrInvalidEmail.WithDetails("Email must contain a username and domain separated by @")
 	}
 	
 	return nil
 }
 
-// validatePassword performs basic password validation
 func validatePassword(password string) error {
 	if password == "" {
 		return errors.ErrPasswordTooWeak
 	}
 	
-	if len(password) < 8 {
-		return errors.ErrPasswordTooWeak.WithDetails("Password must be at least 8 characters long")
+	if len(password) < 6 {
+		return errors.ErrPasswordTooWeak.WithDetails("Password must be at least 6 characters long")
 	}
 	
 	return nil
 }
 
-// HandleRegister handles user registration
 func (h *AuthHandler) HandleRegister(w http.ResponseWriter, r *http.Request) error {
 	log := logger.FromRequest(r)
 	
-	// Parse the request body
 	var req auth.RegistrationRequest
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
 		log.Error("Failed to decode registration request", "error", err)
 		return errors.ErrBadRequest.WithDetails("Invalid request format")
 	}
 
-	// Validate the user input
 	validationErrors := make(errors.FieldErrors)
 	
-	// Validate email
 	if err := validateEmail(req.Email); err != nil {
-		validationErrors["email"] = "Invalid email format"
+		errDetails, ok := err.(*errors.AppError)
+		if ok && errDetails.Details != nil {
+			validationErrors["email"] = errDetails.Details.(string)
+		} else {
+			validationErrors["email"] = "Invalid email format"
+		}
 	}
 	
-	// Validate password
 	if err := validatePassword(req.Password); err != nil {
-		validationErrors["password"] = "Password must be at least 8 characters long"
+		errDetails, ok := err.(*errors.AppError)
+		if ok && errDetails.Details != nil {
+			validationErrors["password"] = errDetails.Details.(string)
+		} else {
+			validationErrors["password"] = "Password must meet security requirements"
+		}
 	}
 	
-	// Validate name fields
 	if req.First_name == "" {
 		validationErrors["first_name"] = "First name is required"
 	}
@@ -83,17 +86,14 @@ func (h *AuthHandler) HandleRegister(w http.ResponseWriter, r *http.Request) err
 		validationErrors["last_name"] = "Last name is required"
 	}
 	
-	// Validate profile type
 	if req.Profile_type != "public" && req.Profile_type != "private" {
 		validationErrors["profile_type"] = "Profile type must be 'public' or 'private'"
 	}
 	
-	// If there are validation errors, return them
 	if len(validationErrors) > 0 {
 		return errors.NewValidationError("Registration validation failed", validationErrors)
 	}
 
-	// Create user account object from request
 	userAccount := &auth.UserAccount{
 		Email:        req.Email,
 		Password:     req.Password,
@@ -106,7 +106,6 @@ func (h *AuthHandler) HandleRegister(w http.ResponseWriter, r *http.Request) err
 		userAccount.Date_of_birth = req.Date_of_birth
 	}
 
-	// Create the user account
 	userID, err := h.store.CreateUserAccount(userAccount)
 	if err != nil {
 		log.Error("Failed to create user account", "error", err)
@@ -118,7 +117,6 @@ func (h *AuthHandler) HandleRegister(w http.ResponseWriter, r *http.Request) err
 		return errors.Wrap(err, "Failed to create user account")
 	}
 
-	// Set the ID and return the user account (without password)
 	userAccount.ID = userID
 	userAccount.Password = ""
 
@@ -128,18 +126,15 @@ func (h *AuthHandler) HandleRegister(w http.ResponseWriter, r *http.Request) err
 	})
 }
 
-// HandleLogin handles user login
 func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) error {
 	log := logger.FromRequest(r)
 	
-	// Parse the request body
 	var loginRequest auth.LoginRequest
 	if err := json.NewDecoder(r.Body).Decode(&loginRequest); err != nil {
 		log.Error("Failed to decode login request", "error", err)
 		return errors.ErrBadRequest.WithDetails("Invalid request format")
 	}
 
-	// Validate input
 	validationErrors := make(errors.FieldErrors)
 	
 	if loginRequest.Email == "" {
@@ -154,12 +149,10 @@ func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) error 
 		return errors.NewValidationError("Login validation failed", validationErrors)
 	}
 
-	// Authenticate the user
 	sessionToken, err := h.store.AuthenticateUser(loginRequest.Email, loginRequest.Password)
 	if err != nil {
 		log.Info("Authentication failed", "email", loginRequest.Email, "error", err)
 		
-		// Convert domain errors to app errors
 		if err == auth.ErrInvalidCredentials {
 			return errors.ErrInvalidCredentials
 		}
@@ -167,25 +160,25 @@ func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) error 
 		return errors.Wrap(err, "Authentication failed")
 	}
 
-	// Set session cookie
+	expiry := time.Now().Add(24 * time.Hour)
 	cookie := http.Cookie{
 		Name:     "session_token",
 		Value:    sessionToken,
 		Path:     "/",
 		HttpOnly: true,
+		Secure:   true,
 		SameSite: http.SameSiteStrictMode,
-		// Secure: true, // Uncomment in production with HTTPS
+		Expires:  expiry,
+		MaxAge:   int(24 * time.Hour.Seconds()),
 	}
 	http.SetCookie(w, &cookie)
 
-	// Get the user ID from the session
 	userID, err := h.store.GetUserIdBySession(sessionToken)
 	if err != nil {
 		log.Error("Failed to get user ID from session", "error", err)
 		return errors.Wrap(err, "Failed to get user session")
 	}
 
-	// Create the response
 	response := map[string]interface{}{
 		"message": "Login successful",
 		"user_id": userID,
@@ -195,22 +188,18 @@ func (h *AuthHandler) HandleLogin(w http.ResponseWriter, r *http.Request) error 
 	return utils.WriteJson(w, http.StatusOK, response)
 }
 
-// HandleLogout handles user logout
 func (h *AuthHandler) HandleLogout(w http.ResponseWriter, r *http.Request) error {
 	log := logger.FromRequest(r)
 	
-	// Get the session token from the cookie
 	cookie, err := r.Cookie("session_token")
 	if err != nil {
 		if err == http.ErrNoCookie {
-			// No cookie, no session to logout from
 			return utils.WriteJson(w, http.StatusOK, map[string]string{"message": "Already logged out"})
 		}
 		log.Error("Failed to get session cookie", "error", err)
 		return errors.Wrap(err, "Failed to get session cookie")
 	}
 
-	// Delete the session
 	sessionToken := cookie.Value
 	err = h.store.DeleteSession(sessionToken)
 	if err != nil {
@@ -218,15 +207,14 @@ func (h *AuthHandler) HandleLogout(w http.ResponseWriter, r *http.Request) error
 		return errors.Wrap(err, "Failed to delete session")
 	}
 
-	// Clear the cookie
 	cookie = &http.Cookie{
 		Name:     "session_token",
 		Value:    "",
 		Path:     "/",
 		MaxAge:   -1,
 		HttpOnly: true,
+		Secure:   true,
 		SameSite: http.SameSiteStrictMode,
-		// Secure: true, // Uncomment in production with HTTPS
 	}
 	http.SetCookie(w, cookie)
 

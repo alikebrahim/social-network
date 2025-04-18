@@ -11,7 +11,6 @@ import (
 	"socialNetwork/pkg/errors"
 )
 
-// CreateFollowRequest creates a new follow request
 func (s *SQLiteStore) CreateFollowRequest(req following.FollowRequest) error {
 	// Check if the follow relationship already exists
 	query := `SELECT COUNT(*) FROM followers 
@@ -85,7 +84,6 @@ func (s *SQLiteStore) CreateFollowRequest(req following.FollowRequest) error {
 	return nil
 }
 
-// AcceptFollowRequest accepts a follow request
 func (s *SQLiteStore) AcceptFollowRequest(followerID, followedID int64) error {
 	// Check if the request exists
 	query := `SELECT COUNT(*) FROM followers 
@@ -140,7 +138,6 @@ func (s *SQLiteStore) AcceptFollowRequest(followerID, followedID int64) error {
 	return nil
 }
 
-// DeleteFollowRequest removes a follow request or unfollow a user
 func (s *SQLiteStore) DeleteFollowRequest(followerID, followedID int64) error {
 	// Delete the follow relationship or request
 	deleteQuery := `DELETE FROM followers 
@@ -165,7 +162,6 @@ func (s *SQLiteStore) DeleteFollowRequest(followerID, followedID int64) error {
 	return nil
 }
 
-// GetFollowRequests gets all pending follow requests for a user
 func (s *SQLiteStore) GetFollowRequests(userID int64) ([]auth.UserAccount, error) {
 	query := `SELECT u.id, u.email, u.first_name, u.last_name, u.date_of_birth, 
               u.avatar, u.nickname, u.about_me, u.profile_type
@@ -212,7 +208,6 @@ func (s *SQLiteStore) GetFollowRequests(userID int64) ([]auth.UserAccount, error
 	return usersList, nil
 }
 
-// IsFollowing checks if a user is following another user
 func (s *SQLiteStore) IsFollowing(followerID, followedID int64) (bool, error) {
 	query := `SELECT COUNT(*) FROM followers 
               WHERE follower_id = ? AND followed_id = ? AND status = 'accepted'`

@@ -2,7 +2,8 @@
 - Remove all references to claude from git history
 - Create a comprehensive test script that will simulate user interactions.
 - Ensure migration files are consolidated by table
-- Update readme with
+- [x] Update readme with
     - Instructions for server config with env vars: using direnv.
     - Instructions for manual migrations with goose
-- Remove uneccesary comments and improve others that are useful
+- [x] Remove uneccesary comments and improve others that are useful
+- [x] Generate a file based on endpoint doc and errors to aid frontend dev

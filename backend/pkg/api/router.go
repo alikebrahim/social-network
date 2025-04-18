@@ -25,7 +25,7 @@ func (s *APIServer) setupRouter() *http.ServeMux {
 	// Add logger middleware
 	logMiddleware := logger.RequestMiddleware()
 
-	// Helper function for routes that require JWT authentication
+	// Simplified helper function for routes that require authentication
 	withJWTAuth := func(handlerFunc func(http.ResponseWriter, *http.Request) error) func(http.ResponseWriter, *http.Request) error {
 		return func(w http.ResponseWriter, r *http.Request) error {
 			// Get logger from request context

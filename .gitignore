@@ -1,5 +1,6 @@
 # Go specific
 /backend/tmp/
+/backend/logs/
 *.exe
 *.exe~
 *.dll
@@ -8,6 +9,14 @@
 *.test
 *.out
 go.work
+*.prof
+
+# Database files
+*.db
+*.db.bak
+
+# Log files
+*.log
 
 # React/JavaScript specific
 /frontend/node_modules/
@@ -34,8 +43,16 @@ go.work
 .DS_Store
 Thumbs.db
 
+# Temporary files
+*.orig
+*.rej
+*.bak
+*.patch
+
 # Project specific
-CLAUDE.md
-backend/CLAUDE.md
+CLA*.md
+TODO.md
+backend/CLA*.md
+backend/TODO.md
 backend/websocket_test.html
 http/

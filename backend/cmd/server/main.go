@@ -25,13 +25,17 @@ func main() {
 		}
 	}
 
-	logFile := filepath.Join(logsDir, "app.log")
+	// Get log file path from environment or use default
+	logFilePath := os.Getenv("LOG_FILE")
+	if logFilePath == "" {
+		logFilePath = filepath.Join(logsDir, "app.log")
+	}
 	toConsole := os.Getenv("LOG_CONSOLE") == "true" || os.Getenv("LOG_CONSOLE") == ""
 	useColors := os.Getenv("LOG_COLORS") != "false" // Use colors by default unless explicitly turned off
 
 	logger.Init(logger.Config{
 		Level:     logger.LevelFromString(logLevel),
-		LogFile:   logFile,
+		LogFile:   logFilePath,
 		ToConsole: toConsole,
 		UseColors: useColors,
 	})
@@ -59,8 +63,22 @@ func main() {
 	}
 	log.Info("Database initialized successfully")
 
+	// Get server host and port from environment or use defaults
+	serverHost := os.Getenv("SERVER_HOST")
+	if serverHost == "" {
+		serverHost = "0.0.0.0"
+	}
+	
+	serverPort := os.Getenv("SERVER_PORT")
+	if serverPort == "" {
+		serverPort = "3000"
+	}
+	
+	// Create the listen address
+	listenAddr := fmt.Sprintf("%s:%s", serverHost, serverPort)
+	
 	// Create and run the API server
-	server := api.NewAPIServer(":3000", store)
-	log.Info("Starting server", "address", ":3000")
+	server := api.NewAPIServer(listenAddr, store)
+	log.Info("Starting server", "address", listenAddr)
 	server.Run()
 }

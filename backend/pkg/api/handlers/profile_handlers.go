@@ -12,13 +12,11 @@ import (
 	"socialNetwork/pkg/storage"
 )
 
-// ProfileHandler manages profile-related handlers
 type ProfileHandler struct {
 	store  storage.Storage
 	logger logger.Logger
 }
 
-// NewProfileHandler creates a new profile handler
 func NewProfileHandler(store storage.Storage) *ProfileHandler {
 	return &ProfileHandler{
 		store:  store,
@@ -26,15 +24,12 @@ func NewProfileHandler(store storage.Storage) *ProfileHandler {
 	}
 }
 
-// HandleGetProfile handles retrieving a user's profile
 func (h *ProfileHandler) HandleGetProfile(w http.ResponseWriter, r *http.Request) error {
 	// Get logger from request context
 	log := logger.FromRequest(r)
 	
-	// Create a new profile instance
 	var p profile.Profile
 	
-	// Get profile ID from request
 	idStr := r.PathValue("id")
 	id, err := strconv.ParseInt(idStr, 10, 64)
 	if err != nil {
@@ -94,7 +89,6 @@ func (h *ProfileHandler) HandleGetProfile(w http.ResponseWriter, r *http.Request
 	return utils.WriteJson(w, http.StatusOK, profileData)
 }
 
-// HandleSetProfilePrivacy handles updating a user's profile privacy settings
 func (h *ProfileHandler) HandleSetProfilePrivacy(w http.ResponseWriter, r *http.Request) error {
 	// Get logger from request context
 	log := logger.FromRequest(r)
@@ -162,7 +156,6 @@ func (h *ProfileHandler) HandleSetProfilePrivacy(w http.ResponseWriter, r *http.
 	})
 }
 
-// HandleGetProfileActivity handles retrieving a user's activity
 func (h *ProfileHandler) HandleGetProfileActivity(w http.ResponseWriter, r *http.Request) error {
 	// Get logger from request context
 	log := logger.FromRequest(r)
@@ -222,7 +215,6 @@ func (h *ProfileHandler) HandleGetProfileActivity(w http.ResponseWriter, r *http
 	})
 }
 
-// HandleGetUserPosts handles retrieving a user's posts
 func (h *ProfileHandler) HandleGetUserPosts(w http.ResponseWriter, r *http.Request) error {
 	// Get logger from request context
 	log := logger.FromRequest(r)

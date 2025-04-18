@@ -5,18 +5,17 @@ import (
 	stdErrors "errors"
 	"log"
 	"net/http"
+	"strconv"
 	"socialNetwork/pkg/errors"
 	"socialNetwork/pkg/logger"
 )
 
-// ApiError represents an API error response
 type ApiError struct {
 	Message string      `json:"message"`
 	Code    string      `json:"code"`
 	Details interface{} `json:"details,omitempty"`
 }
 
-// WriteJson sends a JSON response
 func WriteJson(w http.ResponseWriter, status int, v any) error {
 	w.Header().Add("Content-Type", "application/json")
 	w.WriteHeader(status)
@@ -27,7 +26,6 @@ func WriteJson(w http.ResponseWriter, status int, v any) error {
 	return nil
 }
 
-// WriteError sends an error response with the appropriate status code
 func WriteError(w http.ResponseWriter, err error) error {
 	// Get the status code from the error, or default to 500
 	statusCode := errors.HTTPStatusFromError(err)
@@ -49,7 +47,6 @@ func WriteError(w http.ResponseWriter, err error) error {
 	})
 }
 
-// MakeHTTPHandleFunc is a helper that allows handlers to return errors
 func MakeHTTPHandleFunc(f func(http.ResponseWriter, *http.Request) error) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Get a logger from the request context or create a new one
@@ -67,25 +64,20 @@ func MakeHTTPHandleFunc(f func(http.ResponseWriter, *http.Request) error) http.H
 	}
 }
 
-// GetUserIDFromContext retrieves the user ID from the request context
 func GetUserIDFromContext(r *http.Request) (int64, error) {
-	userID, ok := r.Context().Value("user_id").(int64)
-	if !ok {
+	userIDStr := r.Header.Get("X-User-ID")
+	if userIDStr == "" {
 		return 0, errors.ErrUnauthorized
 	}
+	
+	userID, err := strconv.ParseInt(userIDStr, 10, 64)
+	if err != nil {
+		return 0, errors.Wrap(err, "Invalid user ID format")
+	}
+	
 	return userID, nil
 }
 
-// GetParam retrieves a URL parameter from the request
 func GetParam(r *http.Request, key string) string {
-	// Try to get path parameters from the request context
-	params, ok := r.Context().Value("params").(map[string]string)
-	if ok {
-		if value, exists := params[key]; exists {
-			return value
-		}
-	}
-	
-	// Try to get from path value (for Go 1.22+ compatibility)
 	return r.PathValue(key)
 }

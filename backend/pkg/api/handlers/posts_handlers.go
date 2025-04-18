@@ -14,13 +14,11 @@ import (
 	"socialNetwork/pkg/storage"
 )
 
-// PostsHandler manages posts-related handlers
 type PostsHandler struct {
 	store  storage.Storage
 	logger logger.Logger
 }
 
-// NewPostsHandler creates a new posts handler
 func NewPostsHandler(store storage.Storage) *PostsHandler {
 	return &PostsHandler{
 		store:  store,
@@ -28,7 +26,6 @@ func NewPostsHandler(store storage.Storage) *PostsHandler {
 	}
 }
 
-// HandlePostCreate handles creating a new post
 func (h *PostsHandler) HandlePostCreate(w http.ResponseWriter, r *http.Request) error {
 	// Get logger from request context
 	log := logger.FromRequest(r)
@@ -115,7 +112,6 @@ func (h *PostsHandler) HandlePostCreate(w http.ResponseWriter, r *http.Request) 
 	})
 }
 
-// HandlePostsGet handles retrieving a post
 func (h *PostsHandler) HandlePostsGet(w http.ResponseWriter, r *http.Request) error {
 	// Get logger from request context
 	log := logger.FromRequest(r)
@@ -160,7 +156,6 @@ func (h *PostsHandler) HandlePostsGet(w http.ResponseWriter, r *http.Request) er
 	return utils.WriteJson(w, http.StatusOK, retrievedPosts[0])
 }
 
-// HandlePostEdit handles updating a post
 func (h *PostsHandler) HandlePostEdit(w http.ResponseWriter, r *http.Request) error {
 	// Get logger from request context
 	log := logger.FromRequest(r)
@@ -260,7 +255,6 @@ func (h *PostsHandler) HandlePostEdit(w http.ResponseWriter, r *http.Request) er
 	})
 }
 
-// HandlePostDelete handles deleting a post
 func (h *PostsHandler) HandlePostDelete(w http.ResponseWriter, r *http.Request) error {
 	// Get logger from request context
 	log := logger.FromRequest(r)
@@ -312,7 +306,6 @@ func (h *PostsHandler) HandlePostDelete(w http.ResponseWriter, r *http.Request) 
 	})
 }
 
-// HandlePostComment handles adding a comment to a post
 func (h *PostsHandler) HandlePostComment(w http.ResponseWriter, r *http.Request) error {
 	// Get logger from request context
 	log := logger.FromRequest(r)
@@ -411,7 +404,6 @@ func (h *PostsHandler) HandlePostComment(w http.ResponseWriter, r *http.Request)
 	})
 }
 
-// HandlePostLike handles liking a post
 func (h *PostsHandler) HandlePostLike(w http.ResponseWriter, r *http.Request) error {
 	// Get logger from request context
 	log := logger.FromRequest(r)
@@ -503,7 +495,6 @@ func (h *PostsHandler) HandlePostLike(w http.ResponseWriter, r *http.Request) er
 	})
 }
 
-// HandlePostUnlike handles unliking a post
 func (h *PostsHandler) HandlePostUnlike(w http.ResponseWriter, r *http.Request) error {
 	// Get logger from request context
 	log := logger.FromRequest(r)

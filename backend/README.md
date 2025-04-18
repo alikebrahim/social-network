@@ -56,6 +56,7 @@ The backend follows a domain-driven architecture:
 
 - Go 1.22+
 - SQLite
+- Air (optional, for hot reloading)
 
 ### Installation
 
@@ -72,17 +73,61 @@ goose -dir pkg/db/migrations/sqlite sqlite3 pkg/db/sqlite/main.db up
 
 ### Running the Server
 
+#### Method 1: Standard Run
+
 Basic usage:
 ```
 go run ./cmd/server
 ```
 
-With custom logging configuration:
+With custom configuration:
 ```
-LOG_LEVEL=DEBUG LOG_COLORS=true go run ./cmd/server
+SERVER_HOST=localhost SERVER_PORT=8080 DB_PATH=./custom.db LOG_LEVEL=DEBUG LOG_FILE=./logs/custom.log go run ./cmd/server
 ```
 
-Server will start on port 3000 by default.
+#### Method 2: Hot Reloading with Air
+
+Install Air for hot reloading:
+```
+go install github.com/cosmtrek/air@latest
+```
+
+Run the server with hot reloading:
+```
+air
+```
+
+### Environment Variables
+
+To simplify configuration, you can create a `.env` file in the project root:
+
+```
+# Server Configuration
+SERVER_HOST=0.0.0.0
+SERVER_PORT=3000
+DB_PATH=./pkg/db/sqlite/main.db
+LOG_FILE=./logs/app.log
+
+# Logging Configuration
+LOG_LEVEL=INFO
+LOG_CONSOLE=true
+LOG_COLORS=true
+```
+
+Load these environment variables by:
+1. Sourcing the file: `source .env`
+2. Or install direnv: `direnv allow`
+
+### Configuration Options
+
+The server can be configured using environment variables:
+
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `SERVER_HOST` | Host address to bind to | `0.0.0.0` |
+| `SERVER_PORT` | Port to listen on | `3000` |
+| `DB_PATH` | Path to SQLite database | `./pkg/db/sqlite/main.db` |
+| `LOG_FILE` | Path to log file | `./logs/app.log` |
 
 ## Logger Configuration
 
@@ -96,7 +141,7 @@ Four severity levels are available:
 - **WARN** (yellow): Potential issues that don't prevent operation
 - **ERROR** (red): Critical errors that may impair functionality
 
-### Environment Variables
+### Logging Environment Variables
 
 Configure the logger using these environment variables:
 
@@ -105,6 +150,7 @@ Configure the logger using these environment variables:
 | `LOG_LEVEL` | Sets the minimum log level to display | `INFO` | `DEBUG`, `INFO`, `WARN`, `ERROR` |
 | `LOG_CONSOLE` | Enable/disable console output | `true` | `true`, `false` |
 | `LOG_COLORS` | Enable/disable color-coded log levels | `true` | `true`, `false` |
+| `LOG_FILE` | Path to log file | `./logs/app.log` | Any valid file path |
 
 ### Log Output
 
@@ -221,17 +267,3 @@ A comprehensive structured logging system was implemented with:
 - File and console output options
 - Package-specific loggers for targeted debugging
 
-## Future Enhancements
-
-Potential improvements for future consideration:
-
-1. Enhanced logging features like log rotation
-2. OpenAPI/Swagger documentation for the API
-3. Redis or other caching mechanisms for frequently accessed data
-4. Pagination support for endpoints returning large result sets
-5. Advanced search capabilities across posts, groups, and profiles
-6. Enhanced media file handling and storage
-
-## License
-
-This project is licensed under the MIT License.
